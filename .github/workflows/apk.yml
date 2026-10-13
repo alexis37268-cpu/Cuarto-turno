@@ -23,14 +23,9 @@ jobs:
           pip install pillow
           python3 icono.py
           npx cap add android
-          mkdir -p android/app/src/main/res/raw && cp alarma.wav android/app/src/main/res/raw/alarma.wav
           npx @capacitor/assets generate --android --iconBackgroundColor '#2f4b63' --splashBackgroundColor '#2f4b63' || echo sin iconos
-          M=android/app/src/main/AndroidManifest.xml
-          P='<uses-permission android:name="android.permission.INTERNET" />'
-          for X in POST_NOTIFICATIONS SCHEDULE_EXACT_ALARM USE_EXACT_ALARM RECEIVE_BOOT_COMPLETED WAKE_LOCK VIBRATE; do
-            sed -i "s#$P#$P\n    <uses-permission android:name=\"android.permission.$X\" />#" $M
-          done
           npx cap sync android
+          python3 parche-android.py
           mkdir -p ~/.android && base64 -d firma.txt > ~/.android/debug.keystore
       - name: Compilar
         run: |

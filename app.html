@@ -439,6 +439,8 @@ function vAlarmas(){
     <label class="check"><input type="checkbox" data-cfgchk="alarma2" ${S.cfg.alarma2?'checked':''}> Repetir 10 minutos después</label>
     <p class="note" style="margin:0" id="alEstado">${esc(alEstado)}</p>
     ${alExacta===false?'<button class="btn pri" data-alexacta>Permitir alarmas a la hora exacta</button>':''}
+    ${alPantalla===false?'<button class="btn pri" data-alpantalla>Permitir que la alarma aparezca en pantalla completa</button>':''}
+    ${AL?`<button class="btn" data-alsonido>Sonido: ${esc(alSonido||'predeterminado')} · cambiar</button>`:''}
     <button class="btn" data-alprueba>Probar: sonar en 1 minuto</button>`:''}
     <div class="list">${filas||'<p class="note">No tenés turnos en los próximos 14 días.</p>'}</div>
     ${LN?'':`<p class="note" style="margin:0">Como página web no puede hacer sonar el celu. Ponelas con estas horas, o instalá la app (APK) y suenan solas.</p>
@@ -447,7 +449,8 @@ function vAlarmas(){
 
 /* ---------- alarmas nativas (solo en la app instalada / APK) ---------- */
 const LN=(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform()&&window.Capacitor.Plugins)?window.Capacitor.Plugins.LocalNotifications:null;
-let alEstado='Preparando alarmas…',alExacta=null,_alT=null;
+const AL=LN&&window.Capacitor.Plugins.Alarma?window.Capacitor.Plugins.Alarma:null; /* alarma nativa: pantalla completa y sonido en loop */
+let alEstado='Preparando alarmas…',alExacta=null,alPantalla=null,alSonido='',_alT=null;
 function alarmasLuego(){if(!LN)return;clearTimeout(_alT);_alT=setTimeout(programarAlarmas,800)}
 async function prepararAlarmas(){if(!LN)return;
   /* canal con sonido propio: el plugin lo reproduce por el flujo de ALARMA, así suena aunque el celu esté en silencio */
@@ -461,23 +464,28 @@ async function programarAlarmas(){if(!LN)return;
   try{
     const pend=await LN.getPending();const viejas=(pend.notifications||[]).filter(n=>n.id>=1e8&&n.id<1e9);
     if(viejas.length)await LN.cancel({notifications:viejas.map(n=>({id:n.id}))});
-    if(!S.cfg.alarmasOn){alEstado='Alarmas automáticas apagadas.';refrescarEstado();return}
+    if(!S.cfg.alarmasOn){if(AL)try{await AL.programar({alarmas:[]})}catch(e){}alEstado='Alarmas automáticas apagadas.';refrescarEstado();return}
     let p=await LN.checkPermissions();if(p.display!=='granted')p=await LN.requestPermissions();
     if(p.display!=='granted'){alEstado='Falta el permiso de notificaciones. Activalo en Ajustes del celu → Apps → Rueda y Quincena.';refrescarEstado();return}
     try{const ex=await LN.checkExactNotificationSetting();alExacta=ex.exact_alarm==='granted'}catch(e){alExacta=null}
-    const ahora=Date.now(),lista=[];
+    const ahora=Date.now(),lista=[],nat=[];
     for(const a of alarmasProx(45)){const[h,m]=a.hora.split(':').map(Number);
       const at=new Date(+a.sd.slice(0,4),+a.sd.slice(5,7)-1,+a.sd.slice(8,10),h,m,0);if(at.getTime()<=ahora)continue;
       const base=1e8+(+a.sd.replace(/-/g,'').slice(2))*10; /* id único por día */
       const txt=`Entrás ${a.entra} · turno ${a.turno==='N'?'NOCHE':'DÍA'} · ${fmtDia(a.s)}`;
-      lista.push({id:base,title:a.turno==='N'?'🌙 Hoy vas de NOCHE':'☀️ Hoy vas de DÍA',body:txt,schedule:{at,allowWhileIdle:true},channelId:'alarma_turno',sound:'alarma.wav',actionTypeId:'alarma',ongoing:false,autoCancel:true});
+      const tit=a.turno==='N'?'🌙 Hoy vas de NOCHE':'☀️ Hoy vas de DÍA';
+      nat.push({id:base,at:at.getTime(),titulo:tit,texto:txt});
+      if(S.cfg.alarma2)nat.push({id:base+1,at:at.getTime()+10*60000,titulo:'⏰ Segundo aviso · '+tit,texto:txt});
+      lista.push({id:base,title:tit,body:txt,schedule:{at,allowWhileIdle:true},channelId:'alarma_turno',sound:'alarma.wav',actionTypeId:'alarma',ongoing:false,autoCancel:true});
       if(S.cfg.alarma2)lista.push({id:base+1,title:'⏰ Segundo aviso',body:txt,schedule:{at:new Date(at.getTime()+10*60000),allowWhileIdle:true},channelId:'alarma_turno',sound:'alarma.wav',actionTypeId:'alarma'})}
-    if(lista.length)await LN.schedule({notifications:lista});
+    if(AL){const r=await AL.programar({alarmas:nat});alExacta=r.exactas;alPantalla=r.pantallaCompleta;alSonido=r.sonido}
+    else if(lista.length)await LN.schedule({notifications:lista});
     const prox=lista[0];
     alEstado=prox?`${lista.length} alarmas programadas. La próxima: ${prox.schedule.at.toLocaleString('es-AR',{weekday:'short',day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})}. Abrí la app al menos una vez por mes para que siga programando.`:'No hay turnos en los próximos 45 días.';
   }catch(e){alEstado='No se pudieron programar las alarmas: '+(e&&e.message||e)}
   refrescarEstado()}
-function refrescarEstado(){const el=document.getElementById('alEstado');if(el)el.textContent=alEstado;if(tab==='hoy'&&(alExacta===false)!==!!document.querySelector('[data-alexacta]'))render()}
+function refrescarEstado(){const el=document.getElementById('alEstado');if(el)el.textContent=alEstado;
+  if(tab==='hoy'&&((alExacta===false)!==!!document.querySelector('[data-alexacta]')||(alPantalla===false)!==!!document.querySelector('[data-alpantalla]')||(AL&&!document.querySelector('[data-alsonido]')?.textContent.includes(alSonido))))render()}
 
 function vCal(){
   const y=+calMes.slice(0,4),m=+calMes.slice(5,7);
@@ -772,7 +780,10 @@ app.addEventListener('click',e=>{
   if(b.dataset.resfer){c.ferQuitados=c.ferQuitados.filter(x=>x!==b.dataset.resfer);save();render();return}
   if(b.hasAttribute('data-addfer')){const d=document.getElementById('nfD').value,n=document.getElementById('nfN').value.trim()||'Feriado';
     if(!d){toast('Elegí la fecha');return} if(!feriado(d))c.feriados.push({d,n});save();render();toast('Feriado agregado');return}
-  if(b.hasAttribute('data-alexacta')){try{LN.changeExactNotificationSetting().then(()=>programarAlarmas())}catch(e){}return}
+  if(b.hasAttribute('data-alexacta')){try{(AL?AL.pedirExactas():LN.changeExactNotificationSetting()).then(()=>setTimeout(programarAlarmas,1500))}catch(e){}return}
+  if(b.hasAttribute('data-alpantalla')){try{AL.pedirPantallaCompleta().then(()=>setTimeout(programarAlarmas,1500))}catch(e){}return}
+  if(b.hasAttribute('data-alsonido')){try{AL.elegirSonido().then(r=>{alSonido=r.sonido;render();toast('Sonido: '+r.sonido)})}catch(e){}return}
+  if(b.hasAttribute('data-alprueba')&&AL){AL.probar({segundos:60}).then(()=>toast('Suena en 1 minuto. Bloqueá el celu.'),e=>toast('Error: '+e.message));return}
   if(b.hasAttribute('data-alprueba')){try{LN.schedule({notifications:[{id:999999,title:'⏰ Prueba de alarma',body:'Si escuchaste esto, las alarmas funcionan.',schedule:{at:new Date(Date.now()+60000),allowWhileIdle:true},channelId:'alarma_turno',sound:'alarma.wav',actionTypeId:'alarma'}]}).then(()=>toast('Suena en 1 minuto'),e=>toast('Error: '+e.message))}catch(e){toast('Error: '+e.message)}return}
   if(b.hasAttribute('data-copyal')){const txt=alarmasProx(14).map(a=>`${fmtDia(a.sd)} ${a.hora} (entro ${a.entra})`).join('\n');
     try{navigator.clipboard.writeText(txt).then(()=>toast('Lista copiada'),()=>toast('No se pudo copiar'))}catch(_){toast('No se pudo copiar')}return}
