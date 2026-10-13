@@ -129,7 +129,7 @@ const FERIADOS_2026=[
 const CERRADOS=['2026-01-01','2026-09-07','2026-12-25','2027-01-01'];
 const DEF={
  nombre:'',
- rueda:'DDDFFFDDFFNNNFFFNNFF'.split(''),
+ rueda:'DDDFFDDFFFNNNFFNNFFF'.split(''),
  ancla:'2026-10-01', contra:false,
  turnos:{D:{ini:'06:00',fin:'18:00',noct:0,nt:0},N:{ini:'18:00',fin:'06:00',noct:0,nt:0}},
  horasTurno:12, base:8593.52, aumento:0,
@@ -152,6 +152,7 @@ function migrar(){const c=S.cfg;
   /* el aumento viejo se aplica una vez sobre la hora y la casilla vuelve a cero */
   if(SAVED.base!=null&&nf(SAVED.aumento)){c.base=Math.round(nf(SAVED.base)*(1+nf(SAVED.aumento)/100)*100)/100;c.aumento=0}
   if(SAVED.antAnios!=null&&SAVED.antTotal==null)c.antTotal=nf(SAVED.antAnios)*nf(SAVED.antPct??1);
+  if((SAVED.rueda||[]).join('')==='DDDFFFDDFFNNNFFFNNFF'){c.rueda=DEF.rueda.slice();c.listo=false} /* la rueda real es 3-2-2-3: hay que volver a ubicarse */
   if(SAVED.desc==null||SAVED.desc===20)c.desc=17; /* antes era un 20% fijo; ahora ley 17% + gremio */
   save()}
 if(S.cfg.ferNoTrabHoras===8)S.cfg.ferNoTrabHoras=12; /* el feriado no trabajado se paga el turno de 12 h */
@@ -587,7 +588,7 @@ function vAjustes(){
      <div class="stack">
        <p class="note" style="margin:0">Tocá cada día para cambiarlo: D (día) → N (noche) → F (franco).</p>
        <div class="rueda">${rb}</div>
-       <div class="row" style="gap:6px"><span class="note">Cargar rueda:</span><button class="btn sm" data-plantilla="DDDFFFDDFFNNNFFFNNFF">3-3-2-2 rotando día/noche</button><button class="btn sm" data-plantilla="DDDFFFDDFF">3-3-2-2 solo día</button></div>
+       <div class="row" style="gap:6px"><span class="note">Cargar rueda:</span><button class="btn sm" data-plantilla="DDDFFDDFFFNNNFFNNFFF">3-2-2-3 rotando día/noche (Polimetal)</button><button class="btn sm" data-plantilla="DDDFFFDDFFNNNFFFNNFF">3-3-2-2 rotando día/noche</button><button class="btn sm" data-plantilla="DDDFFFDDFF">3-3-2-2 solo día</button></div>
        <div class="row"><button class="btn sm" data-rlen="-1">− Quitar día</button><button class="btn sm" data-rlen="1">+ Agregar día</button><span class="note">${c.rueda.length} días</span></div>
        <label class="f"><span>Fecha que fue (o es) el día 1 de la rueda</span><input type="date" id="c_ancla" data-cfgtxt="ancla" value="${c.ancla}"></label>
        <div class="stack" style="gap:8px">
