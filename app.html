@@ -450,10 +450,12 @@ const LN=(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.
 let alEstado='Preparando alarmas…',alExacta=null,_alT=null;
 function alarmasLuego(){if(!LN)return;clearTimeout(_alT);_alT=setTimeout(programarAlarmas,800)}
 async function prepararAlarmas(){if(!LN)return;
-  try{await LN.createChannel({id:'alarmas',name:'Alarmas de turno',description:'Te despierta para cada turno',importance:5,visibility:1,vibration:true,lights:true})}catch(e){}
+  /* canal con sonido propio: el plugin lo reproduce por el flujo de ALARMA, así suena aunque el celu esté en silencio */
+  try{await LN.deleteChannel({id:'alarmas'})}catch(e){}
+  try{await LN.createChannel({id:'alarma_turno',name:'Alarma de turno',description:'Te despierta para cada turno, aunque el celu esté en silencio',importance:5,visibility:1,vibration:true,lights:true,sound:'alarma.wav'})}catch(e){}
   try{await LN.registerActionTypes({types:[{id:'alarma',actions:[{id:'posponer',title:'Posponer 10 min'},{id:'ok',title:'Ya me levanté'}]}]})}catch(e){}
   try{LN.addListener('localNotificationActionPerformed',async a=>{if(a.actionId==='posponer'){const n=a.notification;
-    await LN.schedule({notifications:[{id:Math.floor(Date.now()/1000)%2000000000,title:n.title,body:'Pospuesta · '+(n.body||''),schedule:{at:new Date(Date.now()+10*60000),allowWhileIdle:true},channelId:'alarmas',actionTypeId:'alarma'}]})}})}catch(e){}
+    await LN.schedule({notifications:[{id:Math.floor(Date.now()/1000)%2000000000,title:n.title,body:'Pospuesta · '+(n.body||''),schedule:{at:new Date(Date.now()+10*60000),allowWhileIdle:true},channelId:'alarma_turno',sound:'alarma.wav',actionTypeId:'alarma'}]})}})}catch(e){}
   programarAlarmas()}
 async function programarAlarmas(){if(!LN)return;
   try{
@@ -468,8 +470,8 @@ async function programarAlarmas(){if(!LN)return;
       const at=new Date(+a.sd.slice(0,4),+a.sd.slice(5,7)-1,+a.sd.slice(8,10),h,m,0);if(at.getTime()<=ahora)continue;
       const base=1e8+(+a.sd.replace(/-/g,'').slice(2))*10; /* id único por día */
       const txt=`Entrás ${a.entra} · turno ${a.turno==='N'?'NOCHE':'DÍA'} · ${fmtDia(a.s)}`;
-      lista.push({id:base,title:a.turno==='N'?'🌙 Hoy vas de NOCHE':'☀️ Hoy vas de DÍA',body:txt,schedule:{at,allowWhileIdle:true},channelId:'alarmas',actionTypeId:'alarma',ongoing:false,autoCancel:true});
-      if(S.cfg.alarma2)lista.push({id:base+1,title:'⏰ Segundo aviso',body:txt,schedule:{at:new Date(at.getTime()+10*60000),allowWhileIdle:true},channelId:'alarmas',actionTypeId:'alarma'})}
+      lista.push({id:base,title:a.turno==='N'?'🌙 Hoy vas de NOCHE':'☀️ Hoy vas de DÍA',body:txt,schedule:{at,allowWhileIdle:true},channelId:'alarma_turno',sound:'alarma.wav',actionTypeId:'alarma',ongoing:false,autoCancel:true});
+      if(S.cfg.alarma2)lista.push({id:base+1,title:'⏰ Segundo aviso',body:txt,schedule:{at:new Date(at.getTime()+10*60000),allowWhileIdle:true},channelId:'alarma_turno',sound:'alarma.wav',actionTypeId:'alarma'})}
     if(lista.length)await LN.schedule({notifications:lista});
     const prox=lista[0];
     alEstado=prox?`${lista.length} alarmas programadas. La próxima: ${prox.schedule.at.toLocaleString('es-AR',{weekday:'short',day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})}. Abrí la app al menos una vez por mes para que siga programando.`:'No hay turnos en los próximos 45 días.';
@@ -771,7 +773,7 @@ app.addEventListener('click',e=>{
   if(b.hasAttribute('data-addfer')){const d=document.getElementById('nfD').value,n=document.getElementById('nfN').value.trim()||'Feriado';
     if(!d){toast('Elegí la fecha');return} if(!feriado(d))c.feriados.push({d,n});save();render();toast('Feriado agregado');return}
   if(b.hasAttribute('data-alexacta')){try{LN.changeExactNotificationSetting().then(()=>programarAlarmas())}catch(e){}return}
-  if(b.hasAttribute('data-alprueba')){try{LN.schedule({notifications:[{id:999999,title:'⏰ Prueba de alarma',body:'Si escuchaste esto, las alarmas funcionan.',schedule:{at:new Date(Date.now()+60000),allowWhileIdle:true},channelId:'alarmas',actionTypeId:'alarma'}]}).then(()=>toast('Suena en 1 minuto'),e=>toast('Error: '+e.message))}catch(e){toast('Error: '+e.message)}return}
+  if(b.hasAttribute('data-alprueba')){try{LN.schedule({notifications:[{id:999999,title:'⏰ Prueba de alarma',body:'Si escuchaste esto, las alarmas funcionan.',schedule:{at:new Date(Date.now()+60000),allowWhileIdle:true},channelId:'alarma_turno',sound:'alarma.wav',actionTypeId:'alarma'}]}).then(()=>toast('Suena en 1 minuto'),e=>toast('Error: '+e.message))}catch(e){toast('Error: '+e.message)}return}
   if(b.hasAttribute('data-copyal')){const txt=alarmasProx(14).map(a=>`${fmtDia(a.sd)} ${a.hora} (entro ${a.entra})`).join('\n');
     try{navigator.clipboard.writeText(txt).then(()=>toast('Lista copiada'),()=>toast('No se pudo copiar'))}catch(_){toast('No se pudo copiar')}return}
   if(b.hasAttribute('data-copy')){const t=document.getElementById('bk');
