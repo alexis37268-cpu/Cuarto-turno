@@ -168,6 +168,12 @@ const MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','se
 const fmtDia=s=>`${DOW[dow(s)]} ${+s.slice(8,10)}/${+s.slice(5,7)}`;
 const money=v=>'$ '+v.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const nf=v=>(+v||0);
+/* lee números como se escriben acá: 733.138,56 · 11,25 · 8593.52 · 7.636 */
+function num(t){t=String(t??'').trim().replace(/[$\s]/g,'');if(t==='')return NaN;
+  if(t.includes(','))t=t.replace(/\./g,'').replace(',','.');
+  else if((t.match(/\./g)||[]).length>1||/^\d{1,3}\.\d{3}$/.test(t))t=t.replace(/\./g,'');
+  return parseFloat(t)}
+const numv=t=>{const x=num(t);return isNaN(x)?0:x};
 
 /* horas del turno que caen en horario nocturno (por convenio, desde las 21) */
 const mins=t=>{const[h,m]=(t||'0:0').split(':');return +h*60+ +m};
@@ -357,7 +363,7 @@ function vSetup(){
   if(wz.paso==='vuelve'){q='Cuando volvés, ¿entrás de día o de noche?';body=`<div class="opts">${op('vuelve','D','De día')}${op('vuelve','N','De noche')}</div>`}
   if(wz.paso==='sueldo'){q='Tu último recibo';sig=true;
     body=`${reciboForm('wr_')}
-      <label class="f"><span>Si no tenés el importe de antigüedad: años de antigüedad</span><input type="number" inputmode="numeric" id="wzAnios" placeholder="ej. 10"></label>`}
+      <label class="f"><span>Si no tenés el importe de antigüedad: años de antigüedad</span><input type="text" inputmode="decimal" id="wzAnios" placeholder="ej. 10"></label>`}
   if(wz.paso==='calorias'){q='¿Cómo cobrás las calorías?';
     body=`<div class="opts">${op('calModo','siempre','En todos los turnos',(nf(S.cfg.horasTurno)-0.75)+' h por turno (sin los 45 min de comida)')}${op('calModo','orden','Solo con orden de trabajo','las cargás día por día')}</div>`}
   if(wz.paso==='comida'){const ht=nf(S.cfg.horasTurno);q='¿Cuánto dura el descanso de comida?';
@@ -422,7 +428,7 @@ function vAlarmas(){
   const filas=al.map(a=>`<div class="li"><span class="num">${fmtDia(a.sd)}</span><span class="muted">entrás ${a.entra} · ${a.turno==='N'?'noche':'día'}</span><span class="chip t-${a.turno} num" style="font-size:1rem">${a.hora}</span></div>`).join('');
   return `<div class="panel stack">
     <h2>Alarmas</h2>
-    <div class="fields"><label class="f"><span>Sonar antes de entrar (minutos)</span><input type="number" inputmode="numeric" step="5" data-cfg="alarmaMin" id="c_alarmaMin" value="${S.cfg.alarmaMin}"></label>
+    <div class="fields"><label class="f"><span>Sonar antes de entrar (minutos)</span><input type="text" inputmode="decimal" step="5" data-cfg="alarmaMin" id="c_alarmaMin" value="${S.cfg.alarmaMin}"></label>
       <span class="note" style="align-self:end">Incluye viaje y prepararte.</span></div>
     ${LN?`
     <label class="check"><input type="checkbox" data-cfgchk="alarmasOn" ${S.cfg.alarmasOn?'checked':''}> Alarmas automáticas: suenan solas en cada turno de tu rueda</label>
@@ -523,7 +529,7 @@ function vBonos(){
       ${lista||'<p class="note" style="margin:0">Si en el recibo vino un bono o suma fija, copiá el importe acá.</p>'}
       <div class="fields">
         <label class="f"><span>Nombre (opcional)</span><input id="bnN" placeholder="ej. Suma UOM"></label>
-        <label class="f"><span>Importe $</span><input type="number" inputmode="decimal" step="any" id="bnI"></label>
+        <label class="f"><span>Importe $</span><input type="text" inputmode="decimal" step="any" id="bnI"></label>
         ${cobroParte==='m'?`<label class="f"><span>Quincena</span><select id="bnQ"><option value="01">1ª</option><option value="16">2ª</option></select></label>`:''}
       </div>
       <label class="check"><input type="checkbox" id="bnR" checked> No remunerativo (no le hacen descuentos)</label>
@@ -533,8 +539,8 @@ function vBonos(){
 const REC=[['hnCant','Horas normales: cantidad','ej. 96'],['hnImp','Horas normales: importe $',''],['pres','Premio asistencia $',''],
   ['ley','Ley 26341 (ticket) $',''],['mejora','Mejora productiva $',''],['ant','Antigüedad $',''],['tit','Título $','solo 1ª quincena'],['leche','Leche $','solo 1ª quincena']];
 function reciboForm(p){return `<p class="note" style="margin:0">Copiá los importes de tu último recibo trabajado. Dejá vacío lo que no tengas.</p>
-  <div class="fields">${REC.map(([k,l,ph])=>`<label class="f"><span>${l}</span><input type="number" inputmode="decimal" step="any" id="${p}${k}" placeholder="${ph}"></label>`).join('')}</div>`}
-function leerRecibo(p){const v={};for(const[k]of REC){const e=document.getElementById(p+k);if(e&&e.value!=='')v[k]=+e.value}return v}
+  <div class="fields">${REC.map(([k,l,ph])=>`<label class="f"><span>${l}</span><input type="text" inputmode="decimal" step="any" id="${p}${k}" placeholder="${ph}"></label>`).join('')}</div>`}
+function leerRecibo(p){const v={};for(const[k]of REC){const e=document.getElementById(p+k);if(e&&e.value!==''&&!isNaN(num(e.value)))v[k]=num(e.value)}return v}
 function aplicarRecibo(v){const c=S.cfg,cambios=[];
   if(v.hnCant&&v.hnImp){c.base=Math.round(v.hnImp/v.hnCant*100)/100;cambios.push('hora '+money(c.base))}
   if(v.pres!=null){c.presentismo=v.pres;cambios.push('presentismo')}
@@ -544,7 +550,7 @@ function aplicarRecibo(v){const c=S.cfg,cambios=[];
   if(v.tit!=null){c.titulo=v.tit;cambios.push('título')}
   if(v.leche!=null){c.leche=v.leche;cambios.push('leche')}
   return cambios}
-function inp(id,label,val,step='any'){return `<label class="f"><span>${label}</span><input type="number" inputmode="decimal" step="${step}" id="c_${id}" data-cfg="${id}" value="${val}"></label>`}
+function inp(id,label,val,step='any'){return `<label class="f"><span>${label}</span><input type="text" inputmode="decimal" step="${step}" id="c_${id}" data-cfg="${id}" value="${val}"></label>`}
 function vAjustes(){
   const c=S.cfg;
   const rb=c.rueda.map((x,i)=>`<button class="t-${x}" data-rueda="${i}" aria-label="Día ${i+1}: ${x}">${x}<small>${i+1}</small></button>`).join('');
@@ -579,8 +585,8 @@ function vAjustes(){
          <label class="f"><span>Turno día: sale</span><input type="time" data-turno="D.fin" value="${c.turnos.D.fin}"></label>
          <label class="f"><span>Turno noche: entra</span><input type="time" data-turno="N.ini" value="${c.turnos.N.ini}"></label>
          <label class="f"><span>Turno noche: sale</span><input type="time" data-turno="N.fin" value="${c.turnos.N.fin}"></label>
-         <label class="f"><span>Hs nocturnas por turno día</span><input type="number" step="any" data-turno="D.noct" value="${c.turnos.D.noct}"></label>
-         <label class="f"><span>Hs nocturnas por turno noche</span><input type="number" step="any" data-turno="N.noct" value="${c.turnos.N.noct}"></label>
+         <label class="f"><span>Hs nocturnas por turno día</span><input type="text" inputmode="decimal" data-turno="D.noct" value="${c.turnos.D.noct}"></label>
+         <label class="f"><span>Hs nocturnas por turno noche</span><input type="text" inputmode="decimal" data-turno="N.noct" value="${c.turnos.N.noct}"></label>
          <label class="f"><span>Horario nocturno desde</span><input type="time" data-cfgtxt="nocIni" value="${c.nocIni}"></label>
          <label class="f"><span>Horario nocturno hasta</span><input type="time" data-cfgtxt="nocFin" value="${c.nocFin}"></label>
        </div>
@@ -598,7 +604,7 @@ function vAjustes(){
        ${inp('base','Valor hora actual $',c.base)}${inp('horasTurno','Horas por turno',c.horasTurno)}
        <div class="stack" style="grid-column:1/-1;gap:8px;background:var(--bg);border-radius:8px;padding:10px">
          <span class="lbl">Aplicar un aumento</span>
-         <div class="row" style="gap:8px;flex-wrap:nowrap"><input type="number" inputmode="decimal" step="any" id="aumPct" placeholder="% ej. 4" style="flex:1"><button class="btn pri" data-aum>Aplicar</button></div>
+         <div class="row" style="gap:8px;flex-wrap:nowrap"><input type="text" inputmode="decimal" step="any" id="aumPct" placeholder="% ej. 4" style="flex:1"><button class="btn pri" data-aum>Aplicar</button></div>
          <p class="note" style="margin:0">Sube la hora y, en la misma proporción, presentismo, mejora productiva, ticket, título y leche.</p>
          ${(c.aumentos||[]).length?`<p class="note" style="margin:0">Aplicados: ${c.aumentos.slice(-4).map(a=>`${a.p}% el ${+a.f.slice(8)}/${+a.f.slice(5,7)}/${a.f.slice(2,4)}`).join(' · ')}</p>`:''}
        </div>
@@ -673,21 +679,21 @@ function abrirDia(s){
     <div class="opts">${opt('auto','Según rueda')}${opt('trabajo','Trabajé')}${opt('extra','Día extra (doble)')}${opt('franco','Franco')}${opt('falta','Falta')}${opt('licencia','Licencia')}</div>
     <div class="fields">
       <label class="f"><span>Turno</span><select id="dTurno"><option value="">Según rueda</option><option value="D" ${o.turno==='D'?'selected':''}>Día</option><option value="N" ${o.turno==='N'?'selected':''}>Noche</option></select></label>
-      <label class="f"><span>Horas del día extra</span><input type="number" inputmode="decimal" step="any" id="dHx" value="${o.hx??''}" placeholder="${S.cfg.horasTurno}"></label>
+      <label class="f"><span>Horas del día extra</span><input type="text" inputmode="decimal" step="any" id="dHx" value="${o.hx??''}" placeholder="${S.cfg.horasTurno}"></label>
       <div class="row" style="grid-column:1/-1;gap:6px"><span class="note">Día extra:</span><button class="btn sm" data-set="dHx:8" data-pick="extra">8 h</button><button class="btn sm" data-set="dHx:12" data-pick="extra">12 h</button></div>
       ${dow(s)===6?`
-      <label class="f"><span>Horas extra de 6 a 14 h (al 50%)</span><input type="number" inputmode="decimal" step="any" id="dH50" value="${o.h50??''}"></label>
-      <label class="f"><span>Horas extra después de las 14 (al 100%)</span><input type="number" inputmode="decimal" step="any" id="dH100" value="${o.h100??''}"></label>
+      <label class="f"><span>Horas extra de 6 a 14 h (al 50%)</span><input type="text" inputmode="decimal" step="any" id="dH50" value="${o.h50??''}"></label>
+      <label class="f"><span>Horas extra después de las 14 (al 100%)</span><input type="text" inputmode="decimal" step="any" id="dH100" value="${o.h100??''}"></label>
       <div class="row" style="gap:6px"><button class="btn sm" data-set="dH50:4">4</button><button class="btn sm" data-set="dH50:8">8</button></div>
       <div class="row" style="gap:6px"><button class="btn sm" data-set="dH100:4">4</button><button class="btn sm" data-set="dH100:8">8</button><button class="btn sm" data-set="dH100:12">12</button></div>`:`
-      <label class="f" style="grid-column:1/-1"><span>Horas extra (al 100%)</span><input type="number" inputmode="decimal" step="any" id="dH100" value="${o.h100??''}"><input type="hidden" id="dH50" value="${o.h50??''}"></label>
+      <label class="f" style="grid-column:1/-1"><span>Horas extra (al 100%)</span><input type="text" inputmode="decimal" step="any" id="dH100" value="${o.h100??''}"><input type="hidden" id="dH50" value="${o.h50??''}"></label>
       <div class="row" style="gap:6px;grid-column:1/-1"><button class="btn sm" data-set="dH100:4">4 h</button><button class="btn sm" data-set="dH100:8">8 h</button><button class="btn sm" data-set="dH100:12">12 h</button></div>`}
-      <label class="f"><span>Llegué tarde (minutos)</span><input type="number" inputmode="numeric" step="1" id="dTarde" value="${o.tarde??''}"></label>
+      <label class="f"><span>Llegué tarde (minutos)</span><input type="text" inputmode="decimal" step="1" id="dTarde" value="${o.tarde??''}"></label>
       <div class="row" style="gap:6px;align-items:flex-end"><button class="btn sm" data-set="dTarde:5">5</button><button class="btn sm" data-set="dTarde:15">15</button><button class="btn sm" data-set="dTarde:30">30</button></div>
-      <label class="f"><span>Horas calóricas</span><input type="number" inputmode="decimal" step="any" id="dCal" value="${o.cal??''}" placeholder="${S.cfg.calModo==='siempre'?S.cfg.calHoras+' (auto)':'por orden'}"></label>
+      <label class="f"><span>Horas calóricas</span><input type="text" inputmode="decimal" step="any" id="dCal" value="${o.cal??''}" placeholder="${S.cfg.calModo==='siempre'?S.cfg.calHoras+' (auto)':'por orden'}"></label>
       <div class="row" style="gap:6px;align-items:flex-end"><button class="btn sm" data-set="dCal:4">4</button><button class="btn sm" data-set="dCal:6">6</button><button class="btn sm" data-set="dCal:${S.cfg.calHoras}">${S.cfg.calHoras}</button></div>
-      <label class="f"><span>Hs nocturnas (vacío = automático)</span><input type="number" inputmode="decimal" step="any" id="dNoct" value="${o.noct??''}"></label>
-      <label class="f"><span>Hs desde las 21 (vacío = auto)</span><input type="number" inputmode="decimal" step="any" id="dNt" value="${o.nt??''}" placeholder="${d.trabaja?horasNoche(d.turno):0}"></label>
+      <label class="f"><span>Hs nocturnas (vacío = automático)</span><input type="text" inputmode="decimal" step="any" id="dNoct" value="${o.noct??''}"></label>
+      <label class="f"><span>Hs desde las 21 (vacío = auto)</span><input type="text" inputmode="decimal" step="any" id="dNt" value="${o.nt??''}" placeholder="${d.trabaja?horasNoche(d.turno):0}"></label>
     </div>
     <div class="row"><button class="btn pri" data-guardar style="flex:1">Guardar</button><button class="btn" data-limpiar>Dejar como la rueda</button></div>
   </div></div>`;
@@ -705,7 +711,7 @@ sheet.addEventListener('click',e=>{
     const o={};
     if(sheet.dataset.est!=='auto')o.estado=sheet.dataset.est;
     if(v('dTurno'))o.turno=v('dTurno');
-    ['hx:dHx','h50:dH50','h100:dH100','noct:dNoct','nt:dNt','cal:dCal','tarde:dTarde'].forEach(p=>{const[k,id]=p.split(':');if(v(id)!=='')o[k]=+v(id)});
+    ['hx:dHx','h50:dH50','h100:dH100','noct:dNoct','nt:dNt','cal:dCal','tarde:dTarde'].forEach(p=>{const[k,id]=p.split(':');if(v(id)!==''&&!isNaN(num(v(id))))o[k]=num(v(id))});
     if(Object.keys(o).length)S.days[s]=o;else delete S.days[s];
     save();sheet.hidden=true;render();toast('Día guardado');return}
   if(b.hasAttribute('data-limpiar')){delete S.days[s];save();sheet.hidden=true;render();toast('Vuelve a la rueda');return}
@@ -725,7 +731,7 @@ app.addEventListener('click',e=>{
     return wzIr(1)}
   if(b.hasAttribute('data-wznext')){
     if(wz.paso==='nombre')wz.nombre=document.getElementById('wzNombre').value.trim();
-    if(wz.paso==='sueldo'){wz.rec=leerRecibo('wr_');const a=document.getElementById('wzAnios').value;wz.anios=a===''?null:+a}
+    if(wz.paso==='sueldo'){wz.rec=leerRecibo('wr_');const a=document.getElementById('wzAnios').value;wz.anios=a===''?null:numv(a)}
     return wzIr(1)}
   if(b.hasAttribute('data-wzback'))return wzIr(-1);
   if(b.hasAttribute('data-wzcancel')){tab='ajustes';render();return}
@@ -741,13 +747,13 @@ app.addEventListener('click',e=>{
   if(b.dataset.contra){c.contra=b.dataset.contra==='1';save();render();toast(c.contra?'Estás en contraturno':'Estás en turno');return}
   if(b.dataset.plantilla){c.rueda=b.dataset.plantilla.split('');save();render();toast('Rueda cargada');return}
   if(b.dataset.rlen){if(+b.dataset.rlen>0)c.rueda.push('F');else if(c.rueda.length>1)c.rueda.pop();save();render();return}
-  if(b.hasAttribute('data-addbono')){const imp=+document.getElementById('bnI').value;if(!imp){toast('Poné el importe');return}
+  if(b.hasAttribute('data-addbono')){const imp=numv(document.getElementById('bnI').value);if(!imp){toast('Poné el importe');return}
     const q=cobroParte==='m'?document.getElementById('bnQ').value:(cobroParte==='2'?'16':'01'),k=cobroMes+'-'+q;
     (S.bonos[k]=S.bonos[k]||[]).push({n:document.getElementById('bnN').value.trim(),imp,noRem:document.getElementById('bnR').checked});
     save();render();toast('Bono agregado');return}
   if(b.dataset.delbono){const[k,i]=b.dataset.delbono.split('|');(S.bonos[k]||[]).splice(+i,1);if(S.bonos[k]&&!S.bonos[k].length)delete S.bonos[k];save();render();return}
   if(b.hasAttribute('data-recibo')){const ch=aplicarRecibo(leerRecibo('ar_'));save();render();toast(ch.length?'Cargado: '+ch.join(', '):'No cargaste ningún importe');return}
-  if(b.hasAttribute('data-aum')){const p=+document.getElementById('aumPct').value;if(!p){toast('Poné el % del aumento');return}
+  if(b.hasAttribute('data-aum')){const p=numv(document.getElementById('aumPct').value);if(!p){toast('Poné el % del aumento');return}
     const k=1+p/100,r2=x=>Math.round(x*100)/100;
     c.base=r2(nf(c.base)*k);for(const f of['presentismo','prodHora','ticket','titulo','leche'])c[f]=r2(nf(c[f])*k);
     c.aumentos=(c.aumentos||[]).concat({f:hq,p});save();render();toast('Hora nueva: '+money(c.base));return}
@@ -776,10 +782,10 @@ app.addEventListener('change',e=>{
   const t=e.target,c=S.cfg;
   if(t.id==='cMes'){if(t.value)cobroMes=t.value;render();return}
   if(t.id==='cParte'){cobroParte=t.value;render();return}
-  if(t.dataset.cfg){c[t.dataset.cfg]=t.value===''?0:+t.value;save();if(t.dataset.cfg==='alarmaMin')render();return}
+  if(t.dataset.cfg){c[t.dataset.cfg]=numv(t.value);save();if(t.dataset.cfg==='alarmaMin')render();return}
   if(t.dataset.cfgtxt){if(t.dataset.cfgtxt==='ancla'&&!t.value)return;c[t.dataset.cfgtxt]=t.value;save();if(t.dataset.cfgtxt==='ancla')toast('Rueda actualizada');return}
   if(t.dataset.cfgchk){c[t.dataset.cfgchk]=t.checked;save();return}
-  if(t.dataset.turno){const[k,f]=t.dataset.turno.split('.');c.turnos[k][f]=t.type==='time'?t.value:(t.value===''?0:+t.value);save();return}
+  if(t.dataset.turno){const[k,f]=t.dataset.turno.split('.');c.turnos[k][f]=t.type==='time'?t.value:numv(t.value);save();return}
 });
 migrar();
 if(!S.cfg.listo){wzNuevo();tab='setup'}
