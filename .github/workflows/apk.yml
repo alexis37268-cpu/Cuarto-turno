@@ -1,0 +1,44 @@
+name: Compilar APK
+on:
+  push:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Preparar
+        run: |
+          npm install
+          node armar-www.js
+          pip install pillow
+          python3 icono.py
+          npx cap add android
+          npx @capacitor/assets generate --android --iconBackgroundColor '#2f4b63' --splashBackgroundColor '#2f4b63' || echo sin iconos
+          M=android/app/src/main/AndroidManifest.xml
+          P='<uses-permission android:name="android.permission.INTERNET" />'
+          for X in POST_NOTIFICATIONS SCHEDULE_EXACT_ALARM USE_EXACT_ALARM RECEIVE_BOOT_COMPLETED WAKE_LOCK VIBRATE; do
+            sed -i "s#$P#$P\n    <uses-permission android:name=\"android.permission.$X\" />#" $M
+          done
+          npx cap sync android
+          mkdir -p ~/.android && base64 -d firma.txt > ~/.android/debug.keystore
+      - name: Compilar
+        run: |
+          cd android && chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../rueda-y-quincena.apk
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ultima
+          name: Rueda y Quincena
+          body: Bajá rueda-y-quincena.apk desde el celu y abrilo para instalar.
+          files: rueda-y-quincena.apk
+          make_latest: true

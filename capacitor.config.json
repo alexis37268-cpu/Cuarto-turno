@@ -1,0 +1,13 @@
+{
+  "appId": "com.alexis.ruedayquincena",
+  "appName": "Rueda y Quincena",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#2f4b63"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "iconColor": "#e8a317"
+    }
+  }
+}

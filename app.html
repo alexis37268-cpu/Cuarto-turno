@@ -1,0 +1,789 @@
+<title>Rueda y Quincena</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: app de una mano — encabezado de turno arriba, contenido por pestañas, barra de pestañas fija abajo */
+:root{
+  --bg:#eef1f3; --panel:#ffffff; --ink:#1b232b; --muted:#5d6b78; --line:#d5dce2;
+  --accent:#e8a317; --accent-ink:#2a1d00; --steel:#2f4b63;
+  --dia:#f2c14e; --noche:#3d5a80; --noche-ink:#fff; --franco:#dfe5ea; --franco-ink:#5d6b78;
+  --bad:#c0392b; --good:#2e7d4f;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12171c; --panel:#1b232b; --ink:#e7ecf0; --muted:#97a6b3; --line:#2c3842;
+  --accent:#f0b43a; --accent-ink:#2a1d00; --steel:#9fc0dc;
+  --dia:#d9a93a; --noche:#4f74a6; --noche-ink:#fff; --franco:#26313a; --franco-ink:#97a6b3;
+  --bad:#ef6b5b; --good:#5cc08a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12171c; --panel:#1b232b; --ink:#e7ecf0; --muted:#97a6b3; --line:#2c3842;
+  --accent:#f0b43a; --accent-ink:#2a1d00; --steel:#9fc0dc;
+  --dia:#d9a93a; --noche:#4f74a6; --noche-ink:#fff; --franco:#26313a; --franco-ink:#97a6b3;
+  --bad:#ef6b5b; --good:#5cc08a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45}
+.wrap{max-width:560px;margin:0 auto;padding-inline:16px;padding-block:12px 96px}
+h1,h2,h3{font-family:var(--f-display);font-weight:700;letter-spacing:.01em;margin:0;text-wrap:balance}
+h2{font-size:1.5rem}
+.lbl{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+.stack{display:flex;flex-direction:column;gap:14px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.muted{color:var(--muted)}
+button{font:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:10px 14px;font-weight:600}
+.btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.sm{padding:6px 10px;font-size:.9rem}
+
+/* Hoy */
+.hero{border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:4px}
+.hero .big{font-family:var(--f-display);font-size:2.6rem;line-height:1;font-weight:700}
+.t-D{background:var(--dia);color:#2a1d00}
+.t-N{background:var(--noche);color:var(--noche-ink)}
+.t-F{background:var(--franco);color:var(--franco-ink)}
+.t-X{background:var(--steel);color:var(--bg)}
+.list{display:flex;flex-direction:column}
+.li{display:grid;grid-template-columns:76px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.li:last-child{border-bottom:0}
+.chip{display:inline-block;border-radius:6px;padding:3px 8px;font-weight:600;font-size:.85rem;white-space:nowrap}
+.fer{color:var(--bad);font-weight:600;font-size:.8rem}
+
+/* Calendario */
+.calhead{display:flex;justify-content:space-between;align-items:center}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.dow{text-align:center;font-size:.72rem;color:var(--muted);font-weight:600;padding-bottom:2px}
+.cell{aspect-ratio:1/1.15;max-width:100%;border-radius:7px;border:0;padding:4px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;font-size:.8rem;position:relative;min-width:0}
+.cell b{font-family:var(--f-num);font-weight:500;font-size:.85rem}
+.cell .tl{font-family:var(--f-display);font-weight:700;font-size:1rem;align-self:flex-end}
+.cell.today{box-shadow:0 0 0 2px var(--ink)}
+.cell .dot{position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:var(--bad)}
+.cell .ov{position:absolute;bottom:4px;left:5px;font-size:.62rem;font-weight:700;text-transform:uppercase}
+.cell.out{visibility:hidden}
+.legend{display:flex;gap:8px;flex-wrap:wrap;font-size:.82rem}
+
+/* Cobro */
+.total{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.total .v{font-family:var(--f-num);font-size:1.7rem}
+.neto{border-left:4px solid var(--accent);padding-left:12px}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+td{padding:7px 0;border-bottom:1px solid var(--line);vertical-align:top}
+td.r{text-align:right;font-family:var(--f-num);font-variant-numeric:tabular-nums;white-space:nowrap;padding-left:8px}
+td small{display:block;color:var(--muted);font-size:.78rem}
+.tablebox{overflow-x:auto}
+.counts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.counts div{background:var(--bg);border-radius:8px;padding:8px;text-align:center}
+.counts .num{font-size:1.3rem;display:block}
+
+/* Formularios */
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+.f{display:flex;flex-direction:column;gap:4px;min-width:0}
+.f span{font-size:.8rem;color:var(--muted)}
+input,select,textarea{font:inherit;width:100%;min-width:0;padding:9px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+input[type=checkbox]{width:auto}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:.92rem}
+.rueda{display:flex;flex-wrap:wrap;gap:6px}
+.rueda button{width:42px;height:48px;border-radius:8px;border:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--f-display);font-weight:700;font-size:1.1rem;line-height:1}
+.rueda button small{font-family:var(--f-num);font-size:.6rem;font-weight:500;opacity:.8}
+details summary{cursor:pointer;font-family:var(--f-display);font-weight:700;font-size:1.2rem}
+details[open] summary{margin-bottom:12px}
+
+/* Tabs */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
+nav.tabs button{border:0;background:none;color:var(--muted);padding:10px 4px 12px;font-family:var(--f-display);font-weight:700;font-size:1rem;letter-spacing:.02em;border-top:3px solid transparent}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-top-color:var(--accent)}
+
+/* Hoja de día */
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--panel);width:100%;max-width:560px;border-radius:14px 14px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:88vh;overflow:auto}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.opts button{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:10px;text-align:left;font-weight:600}
+.opts button[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 2px var(--accent)}
+.note{font-size:.82rem;color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-weight:600;z-index:20}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(30px);opacity:.6}}}
+</style>
+
+<div class="wrap" id="app"></div>
+<nav class="tabs" role="tablist">
+  <button role="tab" data-tab="hoy" aria-selected="true">Hoy</button>
+  <button role="tab" data-tab="cal">Calendario</button>
+  <button role="tab" data-tab="cobro">Cobro</button>
+  <button role="tab" data-tab="ajustes">Ajustes</button>
+</nav>
+<div id="sheet" hidden></div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+const KEY='ruedaQuincena.v1';
+const FERIADOS_2026=[
+ ['2026-01-01','Año Nuevo'],['2026-02-16','Carnaval'],['2026-02-17','Carnaval'],['2026-03-24','Día de la Memoria'],
+ ['2026-04-02','Malvinas'],['2026-04-03','Viernes Santo'],['2026-05-01','Día del Trabajo'],['2026-05-25','Revolución de Mayo'],
+ ['2026-06-15','Paso a la Inmortalidad de Güemes'],['2026-06-20','Día de la Bandera'],['2026-07-09','Independencia'],
+ ['2026-08-17','Paso a la Inmortalidad de San Martín'],['2026-10-12','Diversidad Cultural'],['2026-11-23','Soberanía Nacional'],
+ ['2026-12-08','Inmaculada Concepción'],['2026-12-25','Navidad'],['2026-09-07','Día del Metalúrgico'],['2027-01-01','Año Nuevo']];
+/* días en que la planta no trabaja: nadie va, se cobra el feriado */
+const CERRADOS=['2026-01-01','2026-09-07','2026-12-25','2027-01-01'];
+const DEF={
+ nombre:'',
+ rueda:'DDDFFFDDFFNNNFFFNNFF'.split(''),
+ ancla:'2026-10-01', contra:false,
+ turnos:{D:{ini:'06:00',fin:'18:00',noct:0,nt:0},N:{ini:'18:00',fin:'06:00',noct:0,nt:0}},
+ horasTurno:12, base:8593.52, aumento:0,
+ sabEq:29, domEq:36, sabCorte:'14:00', calHoras:11.25, calPct:20, calModo:'siempre', nocIni:'21:00', nocFin:'06:00', nocMin:8,
+ antAnios:9, antPct:1, antTotal:9, desc:20,
+ leche:16500, presentismo:44440, presPierde:true, tolTarde:15, ticket:60000,
+ prodDia:2000, prodDias:30, prodHora:381.05, titulo:10566.96, plusFeriado:126000,
+ alarmaMin:75, alarmasOn:true, alarma2:true, pctFer:175, ferModo:'promedio', ferProm:12, ferNoTrab:true, ferNoTrabHoras:12, noRem:false,
+ feriados:[], ferQuitados:[], ferAuto:true, aumentos:[]
+};
+let S={cfg:structuredClone(DEF),days:{},bonos:{}};
+let SAVED={};
+try{const raw=localStorage.getItem(KEY);if(raw){const p=JSON.parse(raw);SAVED=p.cfg||{};S={cfg:{...structuredClone(DEF),...p.cfg},days:p.days||{},bonos:p.bonos||{}}}}catch(e){}
+if(S.cfg.calHoras===11.5)S.cfg.calHoras=11.25; /* comida pasó a 45 min */
+if(S.cfg.pctFer===100)S.cfg.pctFer=175; /* hora feriado ≈ hora promedio, según recibos */
+function migrar(){const c=S.cfg;
+  /* feriados: ahora se calculan solos para cualquier año; en la lista guardada quedan solo los agregados a mano */
+  if(!SAVED.ferAuto&&SAVED.feriados){c.feriados=SAVED.feriados.filter(f=>!feriadosAuto(+f.d.slice(0,4)).some(a=>a.d===f.d))}
+  c.ferAuto=true;if(!c.ferQuitados)c.ferQuitados=[];if(!c.aumentos)c.aumentos=[];
+  /* el aumento viejo se aplica una vez sobre la hora y la casilla vuelve a cero */
+  if(SAVED.base!=null&&nf(SAVED.aumento)){c.base=Math.round(nf(SAVED.base)*(1+nf(SAVED.aumento)/100)*100)/100;c.aumento=0}
+  if(SAVED.antAnios!=null&&SAVED.antTotal==null)c.antTotal=nf(SAVED.antAnios)*nf(SAVED.antPct??1);
+  save()}
+if(S.cfg.ferNoTrabHoras===8)S.cfg.ferNoTrabHoras=12; /* el feriado no trabajado se paga el turno de 12 h */
+if(['DDDFFDDFFF','DDDFFFDDFF'].includes((S.cfg.rueda||[]).join('')))S.cfg.rueda=DEF.rueda.slice(); /* ruedas de ejemplo viejas */
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}if(typeof alarmasLuego==='function')alarmasLuego()}
+
+/* ---------- fechas (todo en UTC para no correr días) ---------- */
+const DAY=86400000;
+const iso=t=>new Date(t).toISOString().slice(0,10);
+const toT=s=>Date.UTC(+s.slice(0,4),+s.slice(5,7)-1,+s.slice(8,10));
+const hoyISO=()=>{const d=new Date();return iso(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()))};
+const dow=s=>new Date(toT(s)).getUTCDay(); // 0 dom
+const DOW=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const fmtDia=s=>`${DOW[dow(s)]} ${+s.slice(8,10)}/${+s.slice(5,7)}`;
+const money=v=>'$ '+v.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const nf=v=>(+v||0);
+
+/* horas del turno que caen en horario nocturno (por convenio, desde las 21) */
+const mins=t=>{const[h,m]=(t||'0:0').split(':');return +h*60+ +m};
+function horasNoche(turno){const c=S.cfg,t=c.turnos[turno]||c.turnos.D;
+  let a=mins(t.ini),b=mins(t.fin);if(b<=a)b+=1440;
+  let na=mins(c.nocIni),nb=mins(c.nocFin);if(nb<=na)nb+=1440;
+  let tot=0;for(const k of[-1440,0,1440])tot+=Math.max(0,Math.min(b,nb+k)-Math.max(a,na+k));
+  return tot/60}
+/* régimen planta: recargo sobre las horas de turno en rueda.
+   sábado hasta las 14 → +50%; sábado desde las 14 y domingo → +100% */
+function recargo(s,turno){const c=S.cfg,t=c.turnos[turno]||c.turnos.D,corte=mins(c.sabCorte);
+  let a=mins(t.ini),b=mins(t.fin);if(b<=a)b+=1440;let r=0;
+  for(let m=a;m<b;m+=15){const day=iso(toT(s)+Math.floor(m/1440)*DAY),tod=m%1440,w=dow(day);
+    r+=(w===6?(tod<corte?0.5:1):w===0?1:0)*0.25}
+  return r}
+/* feriados nacionales de cualquier año (inamovibles, Carnaval y Semana Santa según la Pascua, trasladables
+   según la ley 27.399: mar/mié → lunes anterior, jue/vie → lunes siguiente) + días de planta cerrada */
+const _ferCache={};
+function pascua(y){const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),
+  h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),
+  mes=Math.floor((h+l-7*m+114)/31),dia=((h+l-7*m+114)%31)+1;return Date.UTC(y,mes-1,dia)}
+function feriadosAuto(y){if(_ferCache[y])return _ferCache[y];
+  const F=[],P=pascua(y),fx=(m,d)=>iso(Date.UTC(y,m-1,d)),add=(d,n,cerrado=false)=>F.push({d,n,cerrado,auto:true});
+  const tras=(m,d,n)=>{let t=Date.UTC(y,m-1,d),w=new Date(t).getUTCDay();
+    if(w===2)t-=DAY;else if(w===3)t-=2*DAY;else if(w===4)t+=4*DAY;else if(w===5)t+=3*DAY;add(iso(t),n)};
+  add(fx(1,1),'Año Nuevo',true);add(iso(P-48*DAY),'Carnaval');add(iso(P-47*DAY),'Carnaval');
+  add(fx(3,24),'Día de la Memoria');add(fx(4,2),'Malvinas');add(iso(P-2*DAY),'Viernes Santo');
+  add(fx(5,1),'Día del Trabajo');add(fx(5,25),'Revolución de Mayo');tras(6,17,'Paso a la Inmortalidad de Güemes');
+  add(fx(6,20),'Día de la Bandera');add(fx(7,9),'Independencia');tras(8,17,'Paso a la Inmortalidad de San Martín');
+  add(fx(9,7),'Día del Metalúrgico',true);tras(10,12,'Diversidad Cultural');tras(11,20,'Soberanía Nacional');
+  add(fx(12,8),'Inmaculada Concepción');add(fx(12,25),'Navidad',true);
+  return _ferCache[y]=F}
+function feriado(s){if((S.cfg.ferQuitados||[]).includes(s))return null;
+  return S.cfg.feriados.find(f=>f.d===s)||feriadosAuto(+s.slice(0,4)).find(f=>f.d===s)||null}
+function rueda(s,contra){const c=S.cfg,L=c.rueda.length;if(!L)return 'F';if(contra==null)contra=c.contra;
+  const i=Math.round((toT(s)-toT(c.ancla))/DAY),k=((i%L)+L)%L,r=c.rueda[k];
+  if(!contra)return r;
+  if(r!=='F')return 'F';
+  /* contraturno: trabaja cuando el turno descansa, en el mismo horario del ciclo (día o noche) */
+  for(let j=1;j<=L;j++){const p=c.rueda[((k-j)%L+L)%L];if(p!=='F')return p}
+  return 'D'}
+/* día resuelto: qué pasa ese día */
+function dia(s){
+  const o=S.days[s]||{}, r=rueda(s);
+  let est=o.estado||'auto', turno=o.turno||(r==='F'?'D':r);
+  const fe=feriado(s);
+  let trabaja = est==='auto' ? (r!=='F'&&!(fe&&fe.cerrado)) : (est==='trabajo'||est==='extra');
+  if(est==='auto'&&fe&&fe.cerrado)est='franco';
+  if(est==='auto') est = r==='F'?'franco':'trabajo';
+  /* feriado con planta cerrada ya quedó como franco arriba */
+  const t=S.cfg.turnos[turno]||S.cfg.turnos.D;
+  return {s,est,turno,trabaja,rueda:r,over:!!o.estado&&o.estado!=='auto',
+    h50:nf(o.h50),h100:nf(o.h100),tarde:trabaja?nf(o.tarde):0,hx:o.hx!=null&&o.hx!==''?nf(o.hx):nf(S.cfg.horasTurno),
+    noct:o.noct!=null&&o.noct!==''?nf(o.noct):(trabaja?nf(t.noct):0),
+    nt:o.nt!=null&&o.nt!==''?nf(o.nt):(trabaja?horasNoche(turno):0),
+    cal:!trabaja?0:(o.cal!=null&&o.cal!==''?nf(o.cal):(S.cfg.calModo==='siempre'?nf(S.cfg.calHoras):0)), /* solo estando en planta */
+    fer:feriado(s)};
+}
+const NOMBRE_EST={trabajo:'Trabajo',franco:'Franco',extra:'Día extra',falta:'Falta',licencia:'Licencia'};
+function etiqueta(d){
+  if(d.est==='franco')return{txt:d.fer&&d.fer.cerrado?'Planta cerrada':'Franco',cls:'t-F',l:'F'};
+  if(d.est==='falta')return{txt:'Falta',cls:'t-F',l:'×'};
+  if(d.est==='licencia')return{txt:'Licencia',cls:'t-X',l:'L'};
+  const t=S.cfg.turnos[d.turno];
+  const nom=d.turno==='N'?'Noche':'Día';
+  return{txt:(d.est==='extra'?'Extra · ':'')+nom+' '+t.ini+'–'+t.fin,cls:'t-'+d.turno,l:d.turno};
+}
+
+/* ---------- cálculo de la liquidación (misma lógica de la planilla) ---------- */
+function periodo(mes,parte){
+  const y=+mes.slice(0,4),m=+mes.slice(5,7);
+  const fin=new Date(Date.UTC(y,m,0)).getUTCDate();
+  const [a,b]=parte==='1'?[1,15]:parte==='2'?[16,fin]:[1,fin];
+  const out=[];for(let d=a;d<=b;d++)out.push(iso(Date.UTC(y,m-1,d)));
+  return out;
+}
+/* hora promedio de las quincenas anteriores, como en el recibo: total de conceptos variables y fijos ÷ horas normales
+   (sin antigüedad, título ni leche). La usa el feriado. */
+const PROM_INC=['Horas normales','Régimen planta','Horas feriado','Días extra (dobles)','Horas extra 50%','Horas extra 100%','Horas nocturnas','Horas nocturnas (adicional)','Calorías','Presentismo','Mejora productiva','Ticket canasta','Tardanzas'];
+function quincenasAntes(desde,k){const out=[];let t=toT(desde);
+  for(let i=0;i<k;i++){const d=new Date(t-DAY),y=d.getUTCFullYear(),m=d.getUTCMonth()+1,dd=d.getUTCDate();
+    const mes=`${y}-${String(m).padStart(2,'0')}`,q=dd<=15?'1':'2';const f=periodo(mes,q);out.push(f);t=toT(f[0])}
+  return out}
+function horaPromedio(desde){let tot=0,hs=0;
+  for(const f of quincenasAntes(desde,nf(S.cfg.ferProm)||12)){const L=liquidar(f,1,1);
+    const hn=L.n.normal*nf(S.cfg.horasTurno);if(!hn)continue; /* quincenas sin trabajo (licencia) no cuentan */
+    tot+=L.R.filter(r=>PROM_INC.includes(r[0])).reduce((a,r)=>a+r[2],0);hs+=hn}
+  return hs?tot/hs:0}
+function liquidar(fechas,mult,depth=0){
+  const c=S.cfg, vh=nf(c.base), ht=nf(c.horasTurno);
+  const n={ferH:0,tarde:0,tardeDias:0,cal:0,reg:0,fer:0,normal:0,sab:0,dom:0,extra:0,extraH:0,lic:0,falta:0,franco:0,ferTrab:0,ferNoTrab:0,h50:0,h100:0,noct:0,nt:0};
+  for(const s of fechas){
+    const d=dia(s);
+    n.h50+=d.h50;n.h100+=d.h100;n.noct+=d.noct;n.nt+=d.nt;n.cal+=d.cal;
+    if(d.tarde){n.tarde+=d.tarde;n.tardeDias++}
+    if(d.est==='extra'){n.extra++;n.extraH+=d.hx;if(d.fer)n.ferH+=nf(c.ferNoTrabHoras);continue}
+    if(d.est==='trabajo'){
+      if(d.fer){n.fer++;n.normal++;n.reg+=ht;n.ferH+=nf(c.ferNoTrabHoras)} /* feriado trabajado: turno + 100% de recargo + el feriado */
+      else{n.normal++;if(dow(s)===6)n.sab++;if(dow(s)===0)n.dom++;
+        /* llegar tarde también descuenta el recargo de esos minutos */
+        const t0=S.cfg.turnos[d.turno]||S.cfg.turnos.D,w=dow(s),f0=w===6?(mins(t0.ini)<mins(S.cfg.sabCorte)?0.5:1):w===0?1:0;
+        n.reg+=Math.max(0,recargo(s,d.turno)-f0*d.tarde/60)}
+      continue}
+    if(d.est==='licencia'){n.lic++;continue}
+    if(d.est==='falta'){if(d.fer){if(c.ferNoTrab)n.ferH+=nf(c.ferNoTrabHoras);continue} n.falta++;continue} /* el feriado se paga vayas o no */
+    n.franco++; if(d.fer&&c.ferNoTrab)n.ferH+=nf(c.ferNoTrabHoras);
+  }
+  const R=[];const add=(c1,det,v)=>{if(v)R.push([c1,det,v])};
+  const vNormal=vh*ht;
+  add('Horas normales',`${n.normal} turnos × ${ht} h`,n.normal*vNormal);
+  add('Régimen planta',`${n.reg} h de recargo (sáb., dom.${n.fer?' y feriados':''})`,n.reg*vh);
+  add('Días extra (dobles)',`${n.extra} día(s), ${n.extraH} h × ${money(vh*2)}`,n.extraH*vh*2);
+  add('Licencia (estimado)',`${n.lic} días como día normal`,n.lic*vNormal);
+  let vhFer=vh*nf(c.pctFer)/100,origen=`${nf(c.pctFer)}% de la hora`;
+  if(n.ferH&&c.ferModo==='promedio'&&depth===0){const hp=horaPromedio(fechas[0]);if(hp){vhFer=hp;origen=`hora promedio últimas ${nf(c.ferProm)} quincenas`}}
+  add('Horas feriado',`${n.ferH} h × ${money(vhFer)} (${origen})${n.fer?` · ${n.fer} trabajado(s), además del turno`:''}`,n.ferH*vhFer);
+  add('Horas extra 50%',`${n.h50} h × ${money(vh*1.5)}`,n.h50*vh*1.5);
+  add('Horas extra 100%',`${n.h100} h × ${money(vh*2)}`,n.h100*vh*2);
+  add('Horas nocturnas',`${n.noct} h × ${money(vh)}`,n.noct*vh);
+  add('Horas nocturnas (adicional)',`${n.nt} h nocturnas × ${nf(c.nocMin)} min = ${Math.round(n.nt*nf(c.nocMin)/6)/10} h`,n.nt*vh*nf(c.nocMin)/60);
+  add('Calorías',`${n.cal} h al ${nf(c.calPct)}%`,n.cal*vh*nf(c.calPct)/100);
+  add('Antigüedad',`${nf(c.antTotal)}% de las horas normales`,n.normal*vNormal*nf(c.antTotal)/100);
+  /* presentismo: se pierde con una falta, o si la tardanza de la quincena pasa la tolerancia (15 min en total) */
+  let presQ=0,motivo='';
+  for(const q of [fechas.filter(s=>+s.slice(8)<=15),fechas.filter(s=>+s.slice(8)>15)]){if(!q.length)continue;
+    let f=0,t=0;for(const s of q){const d=dia(s);if(d.est==='falta'&&!d.fer)f++;t+=d.tarde}
+    if(c.presPierde&&f>0)motivo='perdido por falta';
+    else if(t>nf(c.tolTarde))motivo=`perdido: ${t} min tarde (tolerancia ${nf(c.tolTarde)})`;
+    else presQ++}
+  add('Presentismo',motivo&&presQ?'una quincena perdida':'completo',presQ*nf(c.presentismo));
+  if(motivo&&!presQ)R.push(['Presentismo',motivo,0]);
+  if(n.tarde)R.push(['Tardanzas',`${n.tarde} min en ${n.tardeDias} día(s) × ${money(vh/60)} por minuto`,-n.tarde/60*vh]);
+  const hProd=n.normal*ht; /* en el recibo: mejora productiva por hora de turno */
+  add('Mejora productiva',`${hProd} h × ${money(nf(c.prodHora))}`,hProd*nf(c.prodHora));
+  const m1=fechas[0].slice(8)==='01'?1:0; /* leche y título: solo en la 1ª quincena */
+  add('Título','solo 1ª quincena',nf(c.titulo)*m1);
+  add('Leche',(c.noRem?'no remunerativo · ':'')+'solo 1ª quincena',nf(c.leche)*m1);
+  add('Ticket canasta',c.noRem?'no remunerativo':'',nf(c.ticket)*mult);
+  /* bonos y sumas fijas que se cargan a mano por quincena */
+  let bonoNoRem=0;
+  for(const k of fechas.filter(s=>s.slice(8)==='01'||s.slice(8)==='16'))for(const b of (S.bonos[k]||[])){
+    R.push(['Bono'+(b.n?': '+b.n:''),b.noRem?'no remunerativo (sin descuentos)':'remunerativo',nf(b.imp)]);if(b.noRem)bonoNoRem+=nf(b.imp)}
+  const bruto=R.reduce((a,r)=>a+r[2],0);
+  const noRem=(c.noRem?(nf(c.leche)*m1+nf(c.ticket)*mult):0)+bonoNoRem;
+  const desc=(bruto-noRem)*nf(c.desc)/100;
+  return{R,n,bruto,desc,neto:bruto-desc,vh};
+}
+
+/* ---------- asistente de primera vez ---------- */
+function secuencia(contra){const L=S.cfg.rueda.length;return Array.from({length:L},(_,k)=>rueda(iso(toT(S.cfg.ancla)+k*DAY),contra))}
+function infoBloque(seq,k){const L=seq.length,v=seq[k];let a=0,b=0;
+  while(a<L-1&&seq[((k-a-1)%L+L)%L]===v)a++; while(b<L-1&&seq[(k+b+1)%L]===v)b++;
+  let vuelve=null;for(let j=b+1;j<=L;j++){const p=seq[(k+j)%L];if(p!=='F'){vuelve=p;break}}
+  return{len:a+b+1,quedan:b+1,vuelve}}
+function largos(seq,est){const s=new Set();seq.forEach((v,k)=>{if(v===est)s.add(infoBloque(seq,k).len)});return[...s].sort((x,y)=>y-x)}
+let wz=null;
+function wzNuevo(){wz={paso:'nombre',nombre:S.cfg.nombre||'',contra:null,estado:null,bloque:null,quedan:null,vuelve:null,anios:null,rec:null,calModo:null,comida:null}}
+function wzPasos(){
+  const seq=wz.contra==null?null:secuencia(wz.contra);
+  const p=['nombre','equipo','estado'];
+  if(seq&&wz.estado&&largos(seq,wz.estado).length>1)p.push('bloque');
+  p.push('quedan');
+  if(wz.estado==='F'&&S.cfg.rueda.includes('D')&&S.cfg.rueda.includes('N'))p.push('vuelve');
+  p.push('sueldo','calorias');
+  p.push('listo');return p}
+function wzIr(d){const p=wzPasos(),i=p.indexOf(wz.paso);wz.paso=p[Math.max(0,Math.min(p.length-1,i+d))];render();window.scrollTo(0,0)}
+function wzUbicar(){
+  const seq=secuencia(wz.contra);const bl=wz.bloque||largos(seq,wz.estado)[0];
+  for(let k=0;k<seq.length;k++){if(seq[k]!==wz.estado)continue;const b=infoBloque(seq,k);
+    if(b.len===bl&&b.quedan===wz.quedan&&(wz.estado!=='F'||!wz.vuelve||b.vuelve===wz.vuelve))return k}
+  return -1}
+function vSetup(){
+  const n=wzPasos(),i=n.indexOf(wz.paso),tot=n.length-1;
+  const op=(k,v,t,sub='')=>`<button data-wz="${k}" data-val="${v}" aria-pressed="${String(wz[k])===String(v)}">${t}${sub?`<br><span class="note">${sub}</span>`:''}</button>`;
+  const NOM={D:'turno día',N:'turno noche',F:'franco'};
+  let q='',body='',sig=false;
+  if(wz.paso==='nombre'){q='¿Cómo te llamás?';body=`<input id="wzNombre" value="${esc(wz.nombre)}" placeholder="Tu nombre" autocomplete="given-name">`;sig=true}
+  if(wz.paso==='equipo'){q='¿En qué equipo estás?';body=`<div class="opts">${op('contra',false,'Turno')}${op('contra',true,'Contraturno','cubre los descansos del turno')}</div>`}
+  if(wz.paso==='estado'){q='Hoy, ¿qué te toca?';const r=S.cfg.rueda;
+    body=`<div class="opts">${r.includes('D')?op('estado','D','Trabajo de día',S.cfg.turnos.D.ini+' a '+S.cfg.turnos.D.fin):''}${r.includes('N')?op('estado','N','Trabajo de noche',S.cfg.turnos.N.ini+' a '+S.cfg.turnos.N.fin):''}${op('estado','F','Estoy de franco')}</div>`}
+  if(wz.paso==='bloque'){const ls=largos(secuencia(wz.contra),wz.estado);
+    q=wz.estado==='F'?'¿Este franco es de cuántos días?':'¿Este bloque de trabajo es de cuántos días?';
+    body=`<div class="opts">${ls.map(l=>op('bloque',l,l+' días')).join('')}</div>`}
+  if(wz.paso==='quedan'){const bl=wz.bloque||largos(secuencia(wz.contra),wz.estado)[0];
+    q=wz.estado==='F'?'¿Cuántos días de franco te quedan, contando hoy?':'¿Cuántos días te quedan de trabajo, contando hoy?';
+    body=`<div class="opts">${Array.from({length:bl},(_,j)=>op('quedan',j+1,(j+1)+(j?' días':' día'),j===0?'hoy es el último':'')).join('')}</div>`}
+  if(wz.paso==='vuelve'){q='Cuando volvés, ¿entrás de día o de noche?';body=`<div class="opts">${op('vuelve','D','De día')}${op('vuelve','N','De noche')}</div>`}
+  if(wz.paso==='sueldo'){q='Tu último recibo';sig=true;
+    body=`${reciboForm('wr_')}
+      <label class="f"><span>Si no tenés el importe de antigüedad: años de antigüedad</span><input type="number" inputmode="numeric" id="wzAnios" placeholder="ej. 10"></label>`}
+  if(wz.paso==='calorias'){q='¿Cómo cobrás las calorías?';
+    body=`<div class="opts">${op('calModo','siempre','En todos los turnos',(nf(S.cfg.horasTurno)-0.75)+' h por turno (sin los 45 min de comida)')}${op('calModo','orden','Solo con orden de trabajo','las cargás día por día')}</div>`}
+  if(wz.paso==='comida'){const ht=nf(S.cfg.horasTurno);q='¿Cuánto dura el descanso de comida?';
+    body=`<p class="note" style="margin:0">Ese tiempo no cuenta como hora calórica.</p><div class="opts">${op('comida',0.5,'30 minutos',(ht-0.5)+' h calóricas por turno')}${op('comida',0.75,'45 minutos',(ht-0.75)+' h calóricas por turno')}</div>`}
+  if(wz.paso==='listo'){const k=wzUbicar();
+    if(k<0){q='No encontré esa combinación';body=`<p>Con la rueda cargada no hay un ${NOM[wz.estado]} de ${wz.bloque||''} días al que le queden ${wz.quedan}. Volvé atrás y revisá, o cambiá la rueda en Ajustes.</p>`}
+    else{const ancla=iso(toT(hq)-k*DAY);let fila='';
+      for(let j=0;j<20;j++){const s=iso(toT(hq)+j*DAY);
+        const save_=S.cfg.ancla;S.cfg.ancla=ancla;const r=rueda(s,wz.contra);S.cfg.ancla=save_;
+        fila+=`<span class="chip t-${r}" style="padding:3px 0;text-align:center;font-size:.75rem">${DOW[dow(s)].slice(0,2)}<br>${+s.slice(8,10)}</span>`}
+      q=`Listo${wz.nombre?', '+esc(wz.nombre):''}`;
+      body=`<p style="margin:0">Así te quedan los próximos 20 días. Si coincide, confirmá.</p>
+        <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:3px">${fila}</div>
+        <button class="btn pri" data-wzfin="${ancla}">Confirmar</button>`}}
+  return `<div class="stack">
+    <div class="row" style="justify-content:space-between"><span class="lbl">Configuración · paso ${Math.min(i+1,tot)} de ${tot}</span>${S.cfg.listo?'<button class="btn sm" data-wzcancel>Cancelar</button>':''}</div>
+    <h1 style="font-size:2rem">${q}</h1>
+    <div class="stack">${body}</div>
+    <div class="row">${i>0?'<button class="btn" data-wzback>Atrás</button>':''}${sig?'<button class="btn pri" data-wznext style="flex:1">Siguiente</button>':''}</div>
+  </div>`}
+
+/* ---------- vistas ---------- */
+let tab='hoy';
+let calMes=hoyISO().slice(0,7);
+const hq=hoyISO();
+let cobroMes=hq.slice(0,7), cobroParte=+hq.slice(8,10)<=15?'1':'2';
+const app=document.getElementById('app');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function vHoy(){
+  const d=dia(hq),e=etiqueta(d);
+  let prox='';for(let i=1;i<=14;i++){const s=iso(toT(hq)+i*DAY),x=dia(s),ex=etiqueta(x);
+    prox+=`<button class="li" data-dia="${s}" style="all:unset;display:grid;grid-template-columns:76px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer">
+      <span class="num">${fmtDia(s)}</span><span>${x.fer?`<span class="fer">${esc(x.fer.n)}</span>`:''}</span><span class="chip ${ex.cls}">${ex.txt}</span></button>`}
+  let sigFr='';for(let i=1;i<=30;i++){const s=iso(toT(hq)+i*DAY);if(!dia(s).trabaja){sigFr=s;break}}
+  let sigT='';for(let i=1;i<=30;i++){const s=iso(toT(hq)+i*DAY);if(dia(s).trabaja){sigT=s;break}}
+  const L=liquidar(periodo(cobroMes,cobroParte),cobroParte==='m'?2:1);
+  return `<div class="stack">
+   <div class="row" style="justify-content:space-between"><h1 style="font-size:1.9rem">${S.cfg.nombre?esc(S.cfg.nombre):'Mi rueda'}</h1><span class="muted"><span class="num">${fmtDia(hq)}</span> · ${S.cfg.contra?'Contraturno':'Turno'}</span></div>
+   <button class="hero ${e.cls}" data-dia="${hq}" style="border:0;text-align:left">
+     <span class="lbl" style="color:inherit;opacity:.8">Hoy</span>
+     <span class="big">${d.trabaja?(d.turno==='N'?'Turno noche':'Turno día'):e.txt}</span>
+     <span>${d.trabaja?`${S.cfg.turnos[d.turno].ini} a ${S.cfg.turnos[d.turno].fin}`:''}${d.fer?' · '+esc(d.fer.n):''}</span>
+   </button>
+   <div class="row" style="gap:8px">
+     <div class="panel" style="flex:1;min-width:140px;padding:12px"><div class="lbl">${d.trabaja?'Próximo descanso':'Volvés a trabajar'}</div><div class="num" style="font-size:1.1rem">${d.trabaja?(sigFr?fmtDia(sigFr):'—'):(sigT?fmtDia(sigT):'—')}</div></div>
+     <button class="panel" data-go="cobro" style="flex:1;min-width:140px;padding:12px;text-align:left;color:var(--ink)"><div class="lbl">Neto ${cobroParte==='m'?'del mes':'quincena'}</div><div class="num" style="font-size:1.1rem">${money(L.neto)}</div></button>
+   </div>
+   <div class="panel"><h2 style="margin-bottom:4px">Próximos 14 días</h2><div class="list">${prox}</div></div>
+   ${vAlarmas()}
+  </div>`;
+}
+const hhmm=m=>{m=((m%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')};
+function alarmasProx(dias){const out=[];
+  for(let i=0;i<=dias;i++){const s=iso(toT(hq)+i*DAY),d=dia(s);if(!d.trabaja)continue;
+    const t=S.cfg.turnos[d.turno]||S.cfg.turnos.D,m=mins(t.ini)-nf(S.cfg.alarmaMin);
+    const sd=m<0?iso(toT(s)-DAY):s; if(sd<hq)continue;
+    out.push({s,sd,hora:hhmm(m),entra:t.ini,turno:d.turno})}
+  return out}
+function vAlarmas(){
+  const al=alarmasProx(14);
+  const filas=al.map(a=>`<div class="li"><span class="num">${fmtDia(a.sd)}</span><span class="muted">entrás ${a.entra} · ${a.turno==='N'?'noche':'día'}</span><span class="chip t-${a.turno} num" style="font-size:1rem">${a.hora}</span></div>`).join('');
+  return `<div class="panel stack">
+    <h2>Alarmas</h2>
+    <div class="fields"><label class="f"><span>Sonar antes de entrar (minutos)</span><input type="number" inputmode="numeric" step="5" data-cfg="alarmaMin" id="c_alarmaMin" value="${S.cfg.alarmaMin}"></label>
+      <span class="note" style="align-self:end">Incluye viaje y prepararte.</span></div>
+    ${LN?`
+    <label class="check"><input type="checkbox" data-cfgchk="alarmasOn" ${S.cfg.alarmasOn?'checked':''}> Alarmas automáticas: suenan solas en cada turno de tu rueda</label>
+    <label class="check"><input type="checkbox" data-cfgchk="alarma2" ${S.cfg.alarma2?'checked':''}> Repetir 10 minutos después</label>
+    <p class="note" style="margin:0" id="alEstado">${esc(alEstado)}</p>
+    ${alExacta===false?'<button class="btn pri" data-alexacta>Permitir alarmas a la hora exacta</button>':''}
+    <button class="btn" data-alprueba>Probar: sonar en 1 minuto</button>`:''}
+    <div class="list">${filas||'<p class="note">No tenés turnos en los próximos 14 días.</p>'}</div>
+    ${LN?'':`<p class="note" style="margin:0">Como página web no puede hacer sonar el celu. Ponelas con estas horas, o instalá la app (APK) y suenan solas.</p>
+    <button class="btn" data-copyal>Copiar lista de alarmas</button>`}
+  </div>`}
+
+/* ---------- alarmas nativas (solo en la app instalada / APK) ---------- */
+const LN=(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform()&&window.Capacitor.Plugins)?window.Capacitor.Plugins.LocalNotifications:null;
+let alEstado='Preparando alarmas…',alExacta=null,_alT=null;
+function alarmasLuego(){if(!LN)return;clearTimeout(_alT);_alT=setTimeout(programarAlarmas,800)}
+async function prepararAlarmas(){if(!LN)return;
+  try{await LN.createChannel({id:'alarmas',name:'Alarmas de turno',description:'Te despierta para cada turno',importance:5,visibility:1,vibration:true,lights:true})}catch(e){}
+  try{await LN.registerActionTypes({types:[{id:'alarma',actions:[{id:'posponer',title:'Posponer 10 min'},{id:'ok',title:'Ya me levanté'}]}]})}catch(e){}
+  try{LN.addListener('localNotificationActionPerformed',async a=>{if(a.actionId==='posponer'){const n=a.notification;
+    await LN.schedule({notifications:[{id:Math.floor(Date.now()/1000)%2000000000,title:n.title,body:'Pospuesta · '+(n.body||''),schedule:{at:new Date(Date.now()+10*60000),allowWhileIdle:true},channelId:'alarmas',actionTypeId:'alarma'}]})}})}catch(e){}
+  programarAlarmas()}
+async function programarAlarmas(){if(!LN)return;
+  try{
+    const pend=await LN.getPending();const viejas=(pend.notifications||[]).filter(n=>n.id>=1e8&&n.id<1e9);
+    if(viejas.length)await LN.cancel({notifications:viejas.map(n=>({id:n.id}))});
+    if(!S.cfg.alarmasOn){alEstado='Alarmas automáticas apagadas.';refrescarEstado();return}
+    let p=await LN.checkPermissions();if(p.display!=='granted')p=await LN.requestPermissions();
+    if(p.display!=='granted'){alEstado='Falta el permiso de notificaciones. Activalo en Ajustes del celu → Apps → Rueda y Quincena.';refrescarEstado();return}
+    try{const ex=await LN.checkExactNotificationSetting();alExacta=ex.exact_alarm==='granted'}catch(e){alExacta=null}
+    const ahora=Date.now(),lista=[];
+    for(const a of alarmasProx(45)){const[h,m]=a.hora.split(':').map(Number);
+      const at=new Date(+a.sd.slice(0,4),+a.sd.slice(5,7)-1,+a.sd.slice(8,10),h,m,0);if(at.getTime()<=ahora)continue;
+      const base=1e8+(+a.sd.replace(/-/g,'').slice(2))*10; /* id único por día */
+      const txt=`Entrás ${a.entra} · turno ${a.turno==='N'?'NOCHE':'DÍA'} · ${fmtDia(a.s)}`;
+      lista.push({id:base,title:a.turno==='N'?'🌙 Hoy vas de NOCHE':'☀️ Hoy vas de DÍA',body:txt,schedule:{at,allowWhileIdle:true},channelId:'alarmas',actionTypeId:'alarma',ongoing:false,autoCancel:true});
+      if(S.cfg.alarma2)lista.push({id:base+1,title:'⏰ Segundo aviso',body:txt,schedule:{at:new Date(at.getTime()+10*60000),allowWhileIdle:true},channelId:'alarmas',actionTypeId:'alarma'})}
+    if(lista.length)await LN.schedule({notifications:lista});
+    const prox=lista[0];
+    alEstado=prox?`${lista.length} alarmas programadas. La próxima: ${prox.schedule.at.toLocaleString('es-AR',{weekday:'short',day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})}. Abrí la app al menos una vez por mes para que siga programando.`:'No hay turnos en los próximos 45 días.';
+  }catch(e){alEstado='No se pudieron programar las alarmas: '+(e&&e.message||e)}
+  refrescarEstado()}
+function refrescarEstado(){const el=document.getElementById('alEstado');if(el)el.textContent=alEstado;if(tab==='hoy'&&(alExacta===false)!==!!document.querySelector('[data-alexacta]'))render()}
+
+function vCal(){
+  const y=+calMes.slice(0,4),m=+calMes.slice(5,7);
+  const first=iso(Date.UTC(y,m-1,1)), fin=new Date(Date.UTC(y,m,0)).getUTCDate();
+  const off=(dow(first)+6)%7;
+  let cells='';['L','M','M','J','V','S','D'].forEach(x=>cells+=`<div class="dow">${x}</div>`);
+  for(let i=0;i<off;i++)cells+=`<div class="cell out"></div>`;
+  for(let d=1;d<=fin;d++){const s=iso(Date.UTC(y,m-1,d)),x=dia(s),e=etiqueta(x);
+    cells+=`<button class="cell ${e.cls} ${s===hq?'today':''}" data-dia="${s}" aria-label="${fmtDia(s)}: ${esc(e.txt)}${x.fer?', feriado':''}">
+      <b>${d}</b>${x.fer?'<span class="dot"></span>':''}${x.over?`<span class="ov">${x.est==='trabajo'?'cambio':NOMBRE_EST[x.est]}</span>`:''}${(x.h50||x.h100)?'<span class="ov" style="left:auto;right:5px">+h</span>':''}<span class="tl">${e.l}</span></button>`}
+  return `<div class="stack">
+   <div class="calhead"><button class="btn sm" data-mes="-1" aria-label="Mes anterior">‹</button><h2>${MES[m-1]} ${y}</h2><button class="btn sm" data-mes="1" aria-label="Mes siguiente">›</button></div>
+   <div class="grid">${cells}</div>
+   <div class="legend"><span class="chip t-D">D día</span><span class="chip t-N">N noche</span><span class="chip t-F">F franco</span><span class="chip t-X">L licencia</span><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--bad)"></span> feriado</span></div>
+   <p class="note">Tocá un día para marcar falta, licencia, día extra, cambio de turno u horas extra.</p>
+  </div>`;
+}
+
+function vCobro(){
+  const f=periodo(cobroMes,cobroParte), L=liquidar(f,cobroParte==='m'?2:1);
+  const rows=L.R.map(r=>`<tr><td>${r[0]}${r[1]?`<small>${esc(r[1])}</small>`:''}</td><td class="r">${money(r[2])}</td></tr>`).join('');
+  const n=L.n;
+  return `<div class="stack">
+   <h1 style="font-size:1.9rem">Cuánto cobro</h1>
+   <div class="fields">
+     <label class="f"><span>Mes</span><input type="month" id="cMes" value="${cobroMes}"></label>
+     <label class="f"><span>Período</span><select id="cParte"><option value="1" ${cobroParte==='1'?'selected':''}>1ª quincena</option><option value="2" ${cobroParte==='2'?'selected':''}>2ª quincena</option><option value="m" ${cobroParte==='m'?'selected':''}>Mes completo</option></select></label>
+   </div>
+   <div class="panel stack">
+     <div class="total neto"><span class="lbl" style="color:var(--ink)">Neto a cobrar</span><span class="v">${money(L.neto)}</span></div>
+     <div class="total"><span class="muted">Bruto</span><span class="num">${money(L.bruto)}</span></div>
+     <div class="total"><span class="muted">Descuentos ${nf(S.cfg.desc)}%</span><span class="num">− ${money(L.desc)}</span></div>
+   </div>
+   <div class="counts">
+     <div><span class="num">${n.normal}</span><span class="lbl">Turnos</span></div>
+     <div><span class="num">${n.sab+n.dom}</span><span class="lbl">Sáb/Dom</span></div>
+     <div><span class="num">${n.fer}</span><span class="lbl">Feriados</span></div>
+     <div><span class="num">${n.extra}</span><span class="lbl">Extra</span></div>
+     <div><span class="num">${n.lic}</span><span class="lbl">Licencia</span></div>
+     <div><span class="num" style="color:${n.falta?'var(--bad)':'inherit'}">${n.falta}</span><span class="lbl">Faltas</span></div>
+   </div>
+   ${vBonos()}
+   <div class="panel"><h2 style="margin-bottom:6px">Detalle</h2><div class="tablebox"><table>${rows}</table></div>
+     <p class="note" style="margin-bottom:0">Valor hora usado: <span class="num">${money(L.vh)}</span>. Es una estimación para controlar el recibo; los conceptos y valores se ajustan en Ajustes.</p></div>
+  </div>`;
+}
+
+function vBonos(){
+  const keys=(cobroParte==='2'?['16']:cobroParte==='1'?['01']:['01','16']).map(d=>cobroMes+'-'+d);
+  const lista=keys.flatMap(k=>(S.bonos[k]||[]).map((b,i)=>`<div class="row" style="justify-content:space-between;border-bottom:1px solid var(--line);padding:6px 0">
+    <span>${esc(b.n||'Bono')} <span class="note">· ${+k.slice(8)===1?'1ª':'2ª'} quincena${b.noRem?' · no remunerativo':''}</span></span>
+    <span class="row" style="gap:8px"><span class="num">${money(nf(b.imp))}</span><button class="btn sm" data-delbono="${k}|${i}" aria-label="Quitar bono">Quitar</button></span></div>`)).join('');
+  return `<details class="panel" ${lista?'open':''}><summary>Bonos y sumas fijas</summary>
+    <div class="stack">
+      ${lista||'<p class="note" style="margin:0">Si en el recibo vino un bono o suma fija, copiá el importe acá.</p>'}
+      <div class="fields">
+        <label class="f"><span>Nombre (opcional)</span><input id="bnN" placeholder="ej. Suma UOM"></label>
+        <label class="f"><span>Importe $</span><input type="number" inputmode="decimal" step="any" id="bnI"></label>
+        ${cobroParte==='m'?`<label class="f"><span>Quincena</span><select id="bnQ"><option value="01">1ª</option><option value="16">2ª</option></select></label>`:''}
+      </div>
+      <label class="check"><input type="checkbox" id="bnR" checked> No remunerativo (no le hacen descuentos)</label>
+      <button class="btn" data-addbono>Agregar bono</button>
+    </div></details>`}
+/* carga desde el recibo: cada uno copia los importes tal cual figuran y la app saca los valores por hora */
+const REC=[['hnCant','Horas normales: cantidad','ej. 96'],['hnImp','Horas normales: importe $',''],['pres','Premio asistencia $',''],
+  ['ley','Ley 26341 (ticket) $',''],['mejora','Mejora productiva $',''],['ant','Antigüedad $',''],['tit','Título $','solo 1ª quincena'],['leche','Leche $','solo 1ª quincena']];
+function reciboForm(p){return `<p class="note" style="margin:0">Copiá los importes de tu último recibo trabajado. Dejá vacío lo que no tengas.</p>
+  <div class="fields">${REC.map(([k,l,ph])=>`<label class="f"><span>${l}</span><input type="number" inputmode="decimal" step="any" id="${p}${k}" placeholder="${ph}"></label>`).join('')}</div>`}
+function leerRecibo(p){const v={};for(const[k]of REC){const e=document.getElementById(p+k);if(e&&e.value!=='')v[k]=+e.value}return v}
+function aplicarRecibo(v){const c=S.cfg,cambios=[];
+  if(v.hnCant&&v.hnImp){c.base=Math.round(v.hnImp/v.hnCant*100)/100;cambios.push('hora '+money(c.base))}
+  if(v.pres!=null){c.presentismo=v.pres;cambios.push('presentismo')}
+  if(v.ley!=null){c.ticket=v.ley;cambios.push('ticket')}
+  if(v.mejora!=null&&v.hnCant){c.prodHora=Math.round(v.mejora/v.hnCant*100)/100;cambios.push('mejora '+money(c.prodHora)+'/h')}
+  if(v.ant!=null&&v.hnImp){c.antTotal=Math.round(v.ant/v.hnImp*1000)/10;cambios.push('antigüedad '+c.antTotal+'%')}
+  if(v.tit!=null){c.titulo=v.tit;cambios.push('título')}
+  if(v.leche!=null){c.leche=v.leche;cambios.push('leche')}
+  return cambios}
+function inp(id,label,val,step='any'){return `<label class="f"><span>${label}</span><input type="number" inputmode="decimal" step="${step}" id="c_${id}" data-cfg="${id}" value="${val}"></label>`}
+function vAjustes(){
+  const c=S.cfg;
+  const rb=c.rueda.map((x,i)=>`<button class="t-${x}" data-rueda="${i}" aria-label="Día ${i+1}: ${x}">${x}<small>${i+1}</small></button>`).join('');
+  const Y=+hq.slice(0,4);
+  const fer=[Y,Y+1].map(y=>{const lista=[...feriadosAuto(y),...c.feriados.filter(f=>+f.d.slice(0,4)===y)].sort((a,b)=>a.d<b.d?-1:1);
+    return `<div class="lbl" style="margin-top:8px">${y}</div>`+lista.map(f=>{const q=c.ferQuitados.includes(f.d);
+      return `<div class="row" style="justify-content:space-between;border-bottom:1px solid var(--line);padding:6px 0;${q?'opacity:.55':''}"><span><span class="num">${fmtDia(f.d)}</span> ${esc(f.n)}${f.cerrado?' <span class="note">· planta cerrada</span>':''}${f.auto?'':' <span class="note">· agregado</span>'}${q?' <span class="note">· quitado</span>':''}</span>${q?`<button class="btn sm" data-resfer="${f.d}">Volver a poner</button>`:`<button class="btn sm" data-delfer="${f.d}" aria-label="Quitar feriado">Quitar</button>`}</div>`}).join('')}).join('');
+  return `<div class="stack">
+   <h1 style="font-size:1.9rem">Ajustes</h1>
+   <p class="note">Cada uno carga su rueda y sus valores. Todo queda guardado en este celular.</p>
+   <button class="btn pri" data-wzstart>Configurar mi turno paso a paso</button>
+   <label class="f"><span>Tu nombre (opcional)</span><input id="c_nombre" data-cfgtxt="nombre" value="${esc(c.nombre)}"></label>
+
+   <details class="panel" open><summary>Rueda de turnos</summary>
+     <div class="stack">
+       <p class="note" style="margin:0">Tocá cada día para cambiarlo: D (día) → N (noche) → F (franco).</p>
+       <div class="rueda">${rb}</div>
+       <div class="row" style="gap:6px"><span class="note">Cargar rueda:</span><button class="btn sm" data-plantilla="DDDFFFDDFFNNNFFFNNFF">3-3-2-2 rotando día/noche</button><button class="btn sm" data-plantilla="DDDFFFDDFF">3-3-2-2 solo día</button></div>
+       <div class="row"><button class="btn sm" data-rlen="-1">− Quitar día</button><button class="btn sm" data-rlen="1">+ Agregar día</button><span class="note">${c.rueda.length} días</span></div>
+       <label class="f"><span>Fecha que fue (o es) el día 1 de la rueda</span><input type="date" id="c_ancla" data-cfgtxt="ancla" value="${c.ancla}"></label>
+       <div class="stack" style="gap:8px">
+         <span class="lbl">¿En qué equipo estás?</span>
+         <p class="note" style="margin:0">El contraturno cubre los descansos del turno: trabaja cuando el otro descansa. Compará con tus días y elegí el tuyo.</p>
+         ${[false,true].map(ct=>{let fila='';for(let i=0;i<20;i++){const s=iso(toT(hq)+i*DAY),r=rueda(s,ct);
+            fila+=`<span class="chip t-${r}" style="padding:3px 0;text-align:center;font-size:.75rem">${DOW[dow(s)].slice(0,2)}<br>${+s.slice(8,10)}</span>`}
+          return `<button class="opts-b" data-contra="${ct?1:0}" aria-pressed="${c.contra===ct}" style="border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:10px;text-align:left;${c.contra===ct?'box-shadow:inset 0 0 0 2px var(--accent);border-color:var(--accent)':''}">
+            <b>${ct?'Contraturno':'Turno'}</b>${c.contra===ct?' · el tuyo':''}
+            <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:3px;margin-top:6px">${fila}</div></button>`}).join('')}
+       </div>
+       <div class="fields">
+         <label class="f"><span>Turno día: entra</span><input type="time" data-turno="D.ini" value="${c.turnos.D.ini}"></label>
+         <label class="f"><span>Turno día: sale</span><input type="time" data-turno="D.fin" value="${c.turnos.D.fin}"></label>
+         <label class="f"><span>Turno noche: entra</span><input type="time" data-turno="N.ini" value="${c.turnos.N.ini}"></label>
+         <label class="f"><span>Turno noche: sale</span><input type="time" data-turno="N.fin" value="${c.turnos.N.fin}"></label>
+         <label class="f"><span>Hs nocturnas por turno día</span><input type="number" step="any" data-turno="D.noct" value="${c.turnos.D.noct}"></label>
+         <label class="f"><span>Hs nocturnas por turno noche</span><input type="number" step="any" data-turno="N.noct" value="${c.turnos.N.noct}"></label>
+         <label class="f"><span>Horario nocturno desde</span><input type="time" data-cfgtxt="nocIni" value="${c.nocIni}"></label>
+         <label class="f"><span>Horario nocturno hasta</span><input type="time" data-cfgtxt="nocFin" value="${c.nocFin}"></label>
+       </div>
+       <p class="note" style="margin:0">Horas en horario nocturno: turno día ${horasNoche('D')} h, turno noche ${horasNoche('N')} h. Cada hora nocturna suma ${c.nocMin} minutos pagos (así figura en el recibo).</p>
+       <div class="fields">${inp('nocMin','Minutos extra por hora nocturna',c.nocMin)}<span></span></div>
+     </div>
+   </details>
+
+   <details class="panel"><summary>Cargar desde mi recibo</summary>
+     <div class="stack">${reciboForm('ar_')}<button class="btn pri" data-recibo>Cargar valores</button></div>
+   </details>
+
+   <details class="panel"><summary>Sueldo</summary>
+     <div class="fields">
+       ${inp('base','Valor hora actual $',c.base)}${inp('horasTurno','Horas por turno',c.horasTurno)}
+       <div class="stack" style="grid-column:1/-1;gap:8px;background:var(--bg);border-radius:8px;padding:10px">
+         <span class="lbl">Aplicar un aumento</span>
+         <div class="row" style="gap:8px;flex-wrap:nowrap"><input type="number" inputmode="decimal" step="any" id="aumPct" placeholder="% ej. 4" style="flex:1"><button class="btn pri" data-aum>Aplicar</button></div>
+         <p class="note" style="margin:0">Sube la hora y, en la misma proporción, presentismo, mejora productiva, ticket, título y leche.</p>
+         ${(c.aumentos||[]).length?`<p class="note" style="margin:0">Aplicados: ${c.aumentos.slice(-4).map(a=>`${a.p}% el ${+a.f.slice(8)}/${+a.f.slice(5,7)}/${a.f.slice(2,4)}`).join(' · ')}</p>`:''}
+       </div>
+       ${inp('desc','Descuentos %',c.desc)}${inp('antTotal','Antigüedad % total (1% por año)',c.antTotal)}
+       <label class="f"><span>Sábado: recargo 100% desde</span><input type="time" data-cfgtxt="sabCorte" value="${c.sabCorte}"></label><span></span>
+       <label class="f" style="grid-column:1/-1"><span>Calorías</span><select data-cfgtxt="calModo"><option value="siempre" ${c.calModo==='siempre'?'selected':''}>En todos los turnos</option><option value="orden" ${c.calModo==='orden'?'selected':''}>Solo con orden de trabajo (se cargan por día)</option></select></label>
+       ${inp('calHoras','Calorías: horas por turno',c.calHoras)}${inp('calPct','Calorías: % de la hora',c.calPct)}
+     </div>
+   </details>
+
+   <details class="panel"><summary>Adicionales por quincena</summary>
+     <p class="note" style="margin-top:0">Leche y título se pagan solo en la 1ª quincena.</p>
+     <div class="stack">
+     <div class="fields">
+       ${inp('presentismo','Presentismo $',c.presentismo)}${inp('leche','Leche $',c.leche)}
+       ${inp('ticket','Ticket canasta $',c.ticket)}${inp('titulo','Título $',c.titulo)}
+       ${inp('prodHora','Mejora productiva $ por hora',c.prodHora)}<span></span>
+       ${inp('ferNoTrabHoras','Horas por feriado',c.ferNoTrabHoras)}
+       <label class="f"><span>Valor de la hora feriado</span><select data-cfgtxt="ferModo"><option value="promedio" ${c.ferModo==='promedio'?'selected':''}>Hora promedio (automático)</option><option value="pct" ${c.ferModo==='pct'?'selected':''}>% fijo de la hora</option></select></label>
+       ${inp('ferProm','Promedio: quincenas hacia atrás',c.ferProm,'1')}${inp('pctFer','% fijo (si no hay promedio)',c.pctFer)}
+     </div>
+     <label class="check"><input type="checkbox" data-cfgchk="presPierde" ${c.presPierde?'checked':''}> Pierdo el presentismo si tengo una falta</label>
+     <div class="fields">${inp('tolTarde','Tolerancia de tardanza por quincena (min)',c.tolTarde,'1')}<span class="note" style="align-self:end">Si la pasás, se descuentan los minutos y no cobrás el presentismo.</span></div>
+     <label class="check"><input type="checkbox" data-cfgchk="ferNoTrab" ${c.ferNoTrab?'checked':''}> Me pagan el feriado que cae en franco</label>
+     <label class="check"><input type="checkbox" data-cfgchk="noRem" ${c.noRem?'checked':''}> Leche y ticket sin descuentos (no remunerativos)</label>
+     </div>
+   </details>
+
+   <details class="panel"><summary>Feriados</summary>
+     <div class="stack">
+       <p class="note" style="margin:0">Se calculan solos todos los años (también Carnaval, Semana Santa y los que se corren al lunes). Si el gobierno cambia alguno, quitalo o agregalo acá.</p>
+       <div>${fer}</div>
+       <div class="fields"><label class="f"><span>Fecha</span><input type="date" id="nfD"></label><label class="f"><span>Nombre</span><input id="nfN" placeholder="Feriado"></label></div>
+       <button class="btn" data-addfer>Agregar feriado</button>
+     </div>
+   </details>
+
+   <details class="panel"><summary>Copia de seguridad</summary>
+     <div class="stack">
+       <p class="note" style="margin:0">Copiá este código y guardalo (en WhatsApp, notas). Si cambiás de celular o se borra, lo pegás abajo.</p>
+       <textarea id="bk" rows="3" readonly>${btoa(unescape(encodeURIComponent(JSON.stringify(S))))}</textarea>
+       <button class="btn" data-copy>Copiar código</button>
+       <textarea id="rs" rows="3" placeholder="Pegá acá un código guardado"></textarea>
+       <button class="btn" data-restore>Restaurar desde código</button>
+       <div id="rsConf" hidden class="row"><span class="note">Esto reemplaza todo lo cargado.</span><button class="btn sm pri" data-restore-ok>Sí, reemplazar</button><button class="btn sm" data-restore-no>Cancelar</button></div>
+       <hr style="border:0;border-top:1px solid var(--line);width:100%">
+       <button class="btn" data-reset>Volver a valores de ejemplo</button>
+       <div id="rsetConf" hidden class="row"><span class="note">Se borran tu rueda, valores y días marcados.</span><button class="btn sm pri" data-reset-ok>Sí, borrar</button><button class="btn sm" data-reset-no>Cancelar</button></div>
+     </div>
+   </details>
+  </div>`;
+}
+
+function render(){
+  const y=window.scrollY;
+  app.innerHTML=({hoy:vHoy,cal:vCal,cobro:vCobro,ajustes:vAjustes,setup:vSetup})[tab]();
+  document.querySelector('nav.tabs').hidden=tab==='setup';
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===tab));
+  if(tab==='ajustes')window.scrollTo(0,y);
+}
+function toast(t){const e=document.getElementById('toast');e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,1800)}
+
+/* ---------- hoja de edición de un día ---------- */
+const sheet=document.getElementById('sheet');
+function abrirDia(s){
+  const o=S.days[s]||{}, d=dia(s), r=rueda(s);
+  const est=o.estado||'auto';
+  const opt=(v,t)=>`<button data-est="${v}" aria-pressed="${est===v}">${t}</button>`;
+  sheet.innerHTML=`<div class="sheet-bg" data-close><div class="sheet stack" role="dialog" aria-label="Editar ${fmtDia(s)}">
+    <div class="row" style="justify-content:space-between"><h2>${fmtDia(s)}</h2><button class="btn sm" data-close>Cerrar</button></div>
+    <p class="note" style="margin:0">Según la rueda: <b>${r==='F'?'franco':r==='N'?'turno noche':'turno día'}</b>${d.fer?' · feriado: '+esc(d.fer.n):''}</p>
+    <div class="opts">${opt('auto','Según rueda')}${opt('trabajo','Trabajé')}${opt('extra','Día extra (doble)')}${opt('franco','Franco')}${opt('falta','Falta')}${opt('licencia','Licencia')}</div>
+    <div class="fields">
+      <label class="f"><span>Turno</span><select id="dTurno"><option value="">Según rueda</option><option value="D" ${o.turno==='D'?'selected':''}>Día</option><option value="N" ${o.turno==='N'?'selected':''}>Noche</option></select></label>
+      <label class="f"><span>Horas del día extra</span><input type="number" inputmode="decimal" step="any" id="dHx" value="${o.hx??''}" placeholder="${S.cfg.horasTurno}"></label>
+      <div class="row" style="grid-column:1/-1;gap:6px"><span class="note">Día extra:</span><button class="btn sm" data-set="dHx:8" data-pick="extra">8 h</button><button class="btn sm" data-set="dHx:12" data-pick="extra">12 h</button></div>
+      ${dow(s)===6?`
+      <label class="f"><span>Horas extra de 6 a 14 h (al 50%)</span><input type="number" inputmode="decimal" step="any" id="dH50" value="${o.h50??''}"></label>
+      <label class="f"><span>Horas extra después de las 14 (al 100%)</span><input type="number" inputmode="decimal" step="any" id="dH100" value="${o.h100??''}"></label>
+      <div class="row" style="gap:6px"><button class="btn sm" data-set="dH50:4">4</button><button class="btn sm" data-set="dH50:8">8</button></div>
+      <div class="row" style="gap:6px"><button class="btn sm" data-set="dH100:4">4</button><button class="btn sm" data-set="dH100:8">8</button><button class="btn sm" data-set="dH100:12">12</button></div>`:`
+      <label class="f" style="grid-column:1/-1"><span>Horas extra (al 100%)</span><input type="number" inputmode="decimal" step="any" id="dH100" value="${o.h100??''}"><input type="hidden" id="dH50" value="${o.h50??''}"></label>
+      <div class="row" style="gap:6px;grid-column:1/-1"><button class="btn sm" data-set="dH100:4">4 h</button><button class="btn sm" data-set="dH100:8">8 h</button><button class="btn sm" data-set="dH100:12">12 h</button></div>`}
+      <label class="f"><span>Llegué tarde (minutos)</span><input type="number" inputmode="numeric" step="1" id="dTarde" value="${o.tarde??''}"></label>
+      <div class="row" style="gap:6px;align-items:flex-end"><button class="btn sm" data-set="dTarde:5">5</button><button class="btn sm" data-set="dTarde:15">15</button><button class="btn sm" data-set="dTarde:30">30</button></div>
+      <label class="f"><span>Horas calóricas</span><input type="number" inputmode="decimal" step="any" id="dCal" value="${o.cal??''}" placeholder="${S.cfg.calModo==='siempre'?S.cfg.calHoras+' (auto)':'por orden'}"></label>
+      <div class="row" style="gap:6px;align-items:flex-end"><button class="btn sm" data-set="dCal:4">4</button><button class="btn sm" data-set="dCal:6">6</button><button class="btn sm" data-set="dCal:${S.cfg.calHoras}">${S.cfg.calHoras}</button></div>
+      <label class="f"><span>Hs nocturnas (vacío = automático)</span><input type="number" inputmode="decimal" step="any" id="dNoct" value="${o.noct??''}"></label>
+      <label class="f"><span>Hs desde las 21 (vacío = auto)</span><input type="number" inputmode="decimal" step="any" id="dNt" value="${o.nt??''}" placeholder="${d.trabaja?horasNoche(d.turno):0}"></label>
+    </div>
+    <div class="row"><button class="btn pri" data-guardar style="flex:1">Guardar</button><button class="btn" data-limpiar>Dejar como la rueda</button></div>
+  </div></div>`;
+  sheet.hidden=false; sheet.dataset.dia=s; sheet.dataset.est=est;
+}
+sheet.addEventListener('click',e=>{
+  const s=sheet.dataset.dia;
+  const b=e.target.closest('button');
+  if(!b){if(e.target.classList.contains('sheet-bg'))sheet.hidden=true;return}
+  if(b.dataset.set){const[id,val]=b.dataset.set.split(':');sheet.querySelector('#'+id).value=val;
+    if(b.dataset.pick){sheet.dataset.est=b.dataset.pick;sheet.querySelectorAll('[data-est]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.est===b.dataset.pick))}return}
+  if(b.dataset.est){sheet.dataset.est=b.dataset.est;sheet.querySelectorAll('[data-est]').forEach(x=>x.setAttribute('aria-pressed',x===b));return}
+  if(b.hasAttribute('data-guardar')){
+    const v=id=>sheet.querySelector('#'+id).value;
+    const o={};
+    if(sheet.dataset.est!=='auto')o.estado=sheet.dataset.est;
+    if(v('dTurno'))o.turno=v('dTurno');
+    ['hx:dHx','h50:dH50','h100:dH100','noct:dNoct','nt:dNt','cal:dCal','tarde:dTarde'].forEach(p=>{const[k,id]=p.split(':');if(v(id)!=='')o[k]=+v(id)});
+    if(Object.keys(o).length)S.days[s]=o;else delete S.days[s];
+    save();sheet.hidden=true;render();toast('Día guardado');return}
+  if(b.hasAttribute('data-limpiar')){delete S.days[s];save();sheet.hidden=true;render();toast('Vuelve a la rueda');return}
+  if(b.hasAttribute('data-close'))sheet.hidden=true;
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')sheet.hidden=true});
+
+/* ---------- eventos ---------- */
+document.querySelector('nav.tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b){tab=b.dataset.tab;render();window.scrollTo(0,0)}});
+app.addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  const c=S.cfg;
+  if(b.dataset.wz){const k=b.dataset.wz,v=b.dataset.val;
+    wz[k]=k==='contra'?v==='true':(k==='bloque'||k==='quedan'||k==='comida')?+v:v;
+    if(k==='contra'||k==='estado'){wz.bloque=null;wz.quedan=null;wz.vuelve=null}
+    if(k==='bloque')wz.quedan=null;
+    return wzIr(1)}
+  if(b.hasAttribute('data-wznext')){
+    if(wz.paso==='nombre')wz.nombre=document.getElementById('wzNombre').value.trim();
+    if(wz.paso==='sueldo'){wz.rec=leerRecibo('wr_');const a=document.getElementById('wzAnios').value;wz.anios=a===''?null:+a}
+    return wzIr(1)}
+  if(b.hasAttribute('data-wzback'))return wzIr(-1);
+  if(b.hasAttribute('data-wzcancel')){tab='ajustes';render();return}
+  if(b.dataset.wzfin){Object.assign(c,{nombre:wz.nombre,contra:wz.contra,ancla:b.dataset.wzfin,listo:true});
+    if(wz.anios!=null)c.antTotal=wz.anios; if(wz.rec)aplicarRecibo(wz.rec);
+    if(wz.calModo)c.calModo=wz.calModo; c.calHoras=nf(c.horasTurno)-0.75; /* comida de 45 min en todos los turnos */
+    save();tab='hoy';render();window.scrollTo(0,0);toast('Configuración guardada');return}
+  if(b.hasAttribute('data-wzstart')){wzNuevo();tab='setup';render();window.scrollTo(0,0);return}
+  if(b.dataset.dia)return abrirDia(b.dataset.dia);
+  if(b.dataset.go){tab=b.dataset.go;render();window.scrollTo(0,0);return}
+  if(b.dataset.mes){const y=+calMes.slice(0,4),m=+calMes.slice(5,7)-1+ +b.dataset.mes;calMes=iso(Date.UTC(y,m,1)).slice(0,7);render();return}
+  if(b.dataset.rueda){const i=+b.dataset.rueda;c.rueda[i]={D:'N',N:'F',F:'D'}[c.rueda[i]];save();render();return}
+  if(b.dataset.contra){c.contra=b.dataset.contra==='1';save();render();toast(c.contra?'Estás en contraturno':'Estás en turno');return}
+  if(b.dataset.plantilla){c.rueda=b.dataset.plantilla.split('');save();render();toast('Rueda cargada');return}
+  if(b.dataset.rlen){if(+b.dataset.rlen>0)c.rueda.push('F');else if(c.rueda.length>1)c.rueda.pop();save();render();return}
+  if(b.hasAttribute('data-addbono')){const imp=+document.getElementById('bnI').value;if(!imp){toast('Poné el importe');return}
+    const q=cobroParte==='m'?document.getElementById('bnQ').value:(cobroParte==='2'?'16':'01'),k=cobroMes+'-'+q;
+    (S.bonos[k]=S.bonos[k]||[]).push({n:document.getElementById('bnN').value.trim(),imp,noRem:document.getElementById('bnR').checked});
+    save();render();toast('Bono agregado');return}
+  if(b.dataset.delbono){const[k,i]=b.dataset.delbono.split('|');(S.bonos[k]||[]).splice(+i,1);if(S.bonos[k]&&!S.bonos[k].length)delete S.bonos[k];save();render();return}
+  if(b.hasAttribute('data-recibo')){const ch=aplicarRecibo(leerRecibo('ar_'));save();render();toast(ch.length?'Cargado: '+ch.join(', '):'No cargaste ningún importe');return}
+  if(b.hasAttribute('data-aum')){const p=+document.getElementById('aumPct').value;if(!p){toast('Poné el % del aumento');return}
+    const k=1+p/100,r2=x=>Math.round(x*100)/100;
+    c.base=r2(nf(c.base)*k);for(const f of['presentismo','prodHora','ticket','titulo','leche'])c[f]=r2(nf(c[f])*k);
+    c.aumentos=(c.aumentos||[]).concat({f:hq,p});save();render();toast('Hora nueva: '+money(c.base));return}
+  if(b.dataset.delfer){const d=b.dataset.delfer;if(c.feriados.some(f=>f.d===d))c.feriados=c.feriados.filter(f=>f.d!==d);else c.ferQuitados.push(d);save();render();return}
+  if(b.dataset.resfer){c.ferQuitados=c.ferQuitados.filter(x=>x!==b.dataset.resfer);save();render();return}
+  if(b.hasAttribute('data-addfer')){const d=document.getElementById('nfD').value,n=document.getElementById('nfN').value.trim()||'Feriado';
+    if(!d){toast('Elegí la fecha');return} if(!feriado(d))c.feriados.push({d,n});save();render();toast('Feriado agregado');return}
+  if(b.hasAttribute('data-alexacta')){try{LN.changeExactNotificationSetting().then(()=>programarAlarmas())}catch(e){}return}
+  if(b.hasAttribute('data-alprueba')){try{LN.schedule({notifications:[{id:999999,title:'⏰ Prueba de alarma',body:'Si escuchaste esto, las alarmas funcionan.',schedule:{at:new Date(Date.now()+60000),allowWhileIdle:true},channelId:'alarmas',actionTypeId:'alarma'}]}).then(()=>toast('Suena en 1 minuto'),e=>toast('Error: '+e.message))}catch(e){toast('Error: '+e.message)}return}
+  if(b.hasAttribute('data-copyal')){const txt=alarmasProx(14).map(a=>`${fmtDia(a.sd)} ${a.hora} (entro ${a.entra})`).join('\n');
+    try{navigator.clipboard.writeText(txt).then(()=>toast('Lista copiada'),()=>toast('No se pudo copiar'))}catch(_){toast('No se pudo copiar')}return}
+  if(b.hasAttribute('data-copy')){const t=document.getElementById('bk');
+    const ok=()=>toast('Código copiado'),fb=()=>{t.focus();t.select();toast('Seleccionado: copialo')};
+    try{navigator.clipboard.writeText(t.value).then(ok,fb)}catch(_){fb()}return}
+  if(b.hasAttribute('data-restore')){document.getElementById('rsConf').hidden=false;return}
+  if(b.hasAttribute('data-restore-no')){document.getElementById('rsConf').hidden=true;return}
+  if(b.hasAttribute('data-restore-ok')){
+    try{const p=JSON.parse(decodeURIComponent(escape(atob(document.getElementById('rs').value.trim()))));
+      if(!p.cfg)throw 0; S={cfg:{...structuredClone(DEF),...p.cfg},days:p.days||{},bonos:p.bonos||{}};save();render();toast('Datos restaurados')}
+    catch(_){toast('El código no es válido. Copialo completo.')}return}
+  if(b.hasAttribute('data-reset')){document.getElementById('rsetConf').hidden=false;return}
+  if(b.hasAttribute('data-reset-no')){document.getElementById('rsetConf').hidden=true;return}
+  if(b.hasAttribute('data-reset-ok')){S={cfg:structuredClone(DEF),days:{},bonos:{}};save();render();toast('Valores de ejemplo cargados');return}
+});
+app.addEventListener('change',e=>{
+  const t=e.target,c=S.cfg;
+  if(t.id==='cMes'){if(t.value)cobroMes=t.value;render();return}
+  if(t.id==='cParte'){cobroParte=t.value;render();return}
+  if(t.dataset.cfg){c[t.dataset.cfg]=t.value===''?0:+t.value;save();if(t.dataset.cfg==='alarmaMin')render();return}
+  if(t.dataset.cfgtxt){if(t.dataset.cfgtxt==='ancla'&&!t.value)return;c[t.dataset.cfgtxt]=t.value;save();if(t.dataset.cfgtxt==='ancla')toast('Rueda actualizada');return}
+  if(t.dataset.cfgchk){c[t.dataset.cfgchk]=t.checked;save();return}
+  if(t.dataset.turno){const[k,f]=t.dataset.turno.split('.');c.turnos[k][f]=t.type==='time'?t.value:(t.value===''?0:+t.value);save();return}
+});
+migrar();
+if(!S.cfg.listo){wzNuevo();tab='setup'}
+render();
+prepararAlarmas();
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&LN){programarAlarmas();if(tab==='hoy')render()}});
+</script>
