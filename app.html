@@ -536,13 +536,16 @@ function vBonos(){
       <button class="btn" data-addbono>Agregar bono</button>
     </div></details>`}
 /* carga desde el recibo: cada uno copia los importes tal cual figuran y la app saca los valores por hora */
-const REC=[['hnCant','Horas normales: cantidad','ej. 96'],['hnImp','Horas normales: importe $',''],['pres','Premio asistencia $',''],
+const REC=[['hnCant','Horas normales: cantidad de horas','ej. 96'],['hnImp','Horas normales: importe TOTAL de la línea $','ej. 733.138,56'],['pres','Premio asistencia $',''],
   ['ley','Ley 26341 (ticket) $',''],['mejora','Mejora productiva $',''],['ant','Antigüedad $',''],['tit','Título $','solo 1ª quincena'],['leche','Leche $','solo 1ª quincena']];
 function reciboForm(p){return `<p class="note" style="margin:0">Copiá los importes de tu último recibo trabajado. Dejá vacío lo que no tengas.</p>
   <div class="fields">${REC.map(([k,l,ph])=>`<label class="f"><span>${l}</span><input type="text" inputmode="decimal" step="any" id="${p}${k}" placeholder="${ph}"></label>`).join('')}</div>`}
 function leerRecibo(p){const v={};for(const[k]of REC){const e=document.getElementById(p+k);if(e&&e.value!==''&&!isNaN(num(e.value)))v[k]=num(e.value)}return v}
 function aplicarRecibo(v){const c=S.cfg,cambios=[];
-  if(v.hnCant&&v.hnImp){c.base=Math.round(v.hnImp/v.hnCant*100)/100;cambios.push('hora '+money(c.base))}
+  if(v.hnImp){let h=v.hnCant?v.hnImp/v.hnCant:v.hnImp;
+    /* si da una hora absurda, seguro pusieron el valor de UNA hora en el importe */
+    if(h<1000&&v.hnImp>=1000)h=v.hnImp;
+    c.base=Math.round(h*100)/100;cambios.push('hora '+money(c.base))}
   if(v.pres!=null){c.presentismo=v.pres;cambios.push('presentismo')}
   if(v.ley!=null){c.ticket=v.ley;cambios.push('ticket')}
   if(v.mejora!=null&&v.hnCant){c.prodHora=Math.round(v.mejora/v.hnCant*100)/100;cambios.push('mejora '+money(c.prodHora)+'/h')}
@@ -601,7 +604,7 @@ function vAjustes(){
 
    <details class="panel"><summary>Sueldo</summary>
      <div class="fields">
-       ${inp('base','Valor hora actual $',c.base)}${inp('horasTurno','Horas por turno',c.horasTurno)}
+       ${inp('base','Valor hora actual $',c.base)}${nf(c.base)<1000?`<p class="note" style="grid-column:1/-1;color:var(--bad);margin:0">El valor hora parece muy bajo (${money(nf(c.base))}). Poné el de tu recibo: importe de horas normales ÷ cantidad de horas.</p>`:''}${inp('horasTurno','Horas por turno',c.horasTurno)}
        <div class="stack" style="grid-column:1/-1;gap:8px;background:var(--bg);border-radius:8px;padding:10px">
          <span class="lbl">Aplicar un aumento</span>
          <div class="row" style="gap:8px;flex-wrap:nowrap"><input type="text" inputmode="decimal" step="any" id="aumPct" placeholder="% ej. 4" style="flex:1"><button class="btn pri" data-aum>Aplicar</button></div>
