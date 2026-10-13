@@ -431,11 +431,12 @@ function vAlarmas(){
   const al=alarmasProx(14);
   const filas=al.map(a=>`<div class="li"><span class="num">${fmtDia(a.sd)}</span><span class="muted">entrás ${a.entra} · ${a.turno==='N'?'noche':'día'}</span><span class="chip t-${a.turno} num" style="font-size:1rem">${a.hora}</span></div>`).join('');
   return `<div class="panel stack">
-    <h2>Alarmas</h2>
+    <div class="row" style="justify-content:space-between"><h2>Alarmas</h2>
+      ${LN?`<button class="btn ${S.cfg.alarmasOn?'pri':''}" data-altoggle aria-pressed="${S.cfg.alarmasOn}" style="min-width:150px">${S.cfg.alarmasOn?'🔔 Activadas':'🔕 Desactivadas'}</button>`:''}</div>
     <div class="fields"><label class="f"><span>Sonar antes de entrar (minutos)</span><input type="text" inputmode="decimal" step="5" data-cfg="alarmaMin" id="c_alarmaMin" value="${S.cfg.alarmaMin}"></label>
       <span class="note" style="align-self:end">Incluye viaje y prepararte.</span></div>
     ${LN?`
-    <label class="check"><input type="checkbox" data-cfgchk="alarmasOn" ${S.cfg.alarmasOn?'checked':''}> Alarmas automáticas: suenan solas en cada turno de tu rueda</label>
+    <p class="note" style="margin:0">${S.cfg.alarmasOn?'Suenan solas cada día que te toca trabajar (no en francos, licencia ni faltas).':'No va a sonar ninguna alarma hasta que las vuelvas a activar.'}</p>
     <label class="check"><input type="checkbox" data-cfgchk="alarma2" ${S.cfg.alarma2?'checked':''}> Repetir 10 minutos después</label>
     <p class="note" style="margin:0" id="alEstado">${esc(alEstado)}</p>
     ${alExacta===false?'<button class="btn pri" data-alexacta>Permitir alarmas a la hora exacta</button>':''}
@@ -780,6 +781,7 @@ app.addEventListener('click',e=>{
   if(b.dataset.resfer){c.ferQuitados=c.ferQuitados.filter(x=>x!==b.dataset.resfer);save();render();return}
   if(b.hasAttribute('data-addfer')){const d=document.getElementById('nfD').value,n=document.getElementById('nfN').value.trim()||'Feriado';
     if(!d){toast('Elegí la fecha');return} if(!feriado(d))c.feriados.push({d,n});save();render();toast('Feriado agregado');return}
+  if(b.hasAttribute('data-altoggle')){c.alarmasOn=!c.alarmasOn;save();render();toast(c.alarmasOn?'Alarmas activadas':'Alarmas desactivadas');return}
   if(b.hasAttribute('data-alexacta')){try{(AL?AL.pedirExactas():LN.changeExactNotificationSetting()).then(()=>setTimeout(programarAlarmas,1500))}catch(e){}return}
   if(b.hasAttribute('data-alpantalla')){try{AL.pedirPantallaCompleta().then(()=>setTimeout(programarAlarmas,1500))}catch(e){}return}
   if(b.hasAttribute('data-alsonido')){try{AL.elegirSonido().then(r=>{alSonido=r.sonido;render();toast('Sonido: '+r.sonido)})}catch(e){}return}
