@@ -367,7 +367,7 @@ function vSetup(){
     body=`${reciboForm('wr_')}
       <label class="f"><span>Si no tenés el importe de antigüedad: años de antigüedad</span><input type="text" inputmode="decimal" id="wzAnios" placeholder="ej. 10"></label>`}
   if(wz.paso==='gremio'){q='¿Estás afiliado a la UOM?';
-    body=`<div class="opts">${op('afiliado','si','Sí, estoy afiliado','cuota sindical '+nf(S.cfg.cuotaAf)+'%')}${op('afiliado','no','No estoy afiliado','aporte solidario '+nf(S.cfg.cuotaNoAf)+'%')}</div>`}
+    body=`<div class="opts">${op('afiliado','si','Sí, estoy afiliado','descuento '+nf(S.cfg.cuotaAf)+'%')}${op('afiliado','no','No estoy afiliado','descuento '+nf(S.cfg.cuotaNoAf)+'%')}</div>`}
   if(wz.paso==='calorias'){q='¿Cómo cobrás las calorías?';
     body=`<div class="opts">${op('calModo','siempre','En todos los turnos',(nf(S.cfg.horasTurno)-0.75)+' h por turno (sin los 45 min de comida)')}${op('calModo','orden','Solo con orden de trabajo','las cargás día por día')}</div>`}
   if(wz.paso==='comida'){const ht=nf(S.cfg.horasTurno);q='¿Cuánto dura el descanso de comida?';
@@ -508,7 +508,7 @@ function vCobro(){
      <div class="total neto"><span class="lbl" style="color:var(--ink)">Neto a cobrar</span><span class="v">${money(L.neto)}</span></div>
      <div class="total"><span class="muted">Bruto</span><span class="num">${money(L.bruto)}</span></div>
      <div class="total"><span class="muted">Ley ${nf(S.cfg.desc)}% (jubilación, PAMI, obra social)</span><span class="num">− ${money(L.dLey)}</span></div>
-     <div class="total"><span class="muted">${S.cfg.afiliado?'Cuota sindical UOM':'Aporte solidario UOM'} ${L.pG}%</span><span class="num">− ${money(L.dGre)}</span></div>
+     <div class="total"><span class="muted">${S.cfg.afiliado?'UOM afiliado':'UOM no afiliado'} ${L.pG}%</span><span class="num">− ${money(L.dGre)}</span></div>
    </div>
    <div class="counts">
      <div><span class="num">${n.normal}</span><span class="lbl">Turnos</span></div>
@@ -616,7 +616,7 @@ function vAjustes(){
          <p class="note" style="margin:0">Sube la hora y, en la misma proporción, presentismo, mejora productiva, ticket, título y leche.</p>
          ${(c.aumentos||[]).length?`<p class="note" style="margin:0">Aplicados: ${c.aumentos.slice(-4).map(a=>`${a.p}% el ${+a.f.slice(8)}/${+a.f.slice(5,7)}/${a.f.slice(2,4)}`).join(' · ')}</p>`:''}
        </div>
-       ${inp('desc','Descuentos de ley %',c.desc)}<label class="f"><span>¿Afiliado a la UOM?</span><select data-afil><option value="0" ${c.afiliado?'':'selected'}>No (aporte solidario ${nf(c.cuotaNoAf)}%)</option><option value="1" ${c.afiliado?'selected':''}>Sí (cuota sindical ${nf(c.cuotaAf)}%)</option></select></label><label class="f"><span>Años de antigüedad</span><input type="text" inputmode="decimal" id="c_antAnios" data-antanios value="${nf(c.antTotal)%1===0?nf(c.antTotal):''}" placeholder="ej. 10"></label>
+       ${inp('desc','Descuentos de ley %',c.desc)}<label class="f"><span>¿Afiliado a la UOM?</span><select data-afil><option value="0" ${c.afiliado?'':'selected'}>No (${nf(c.cuotaNoAf)}%)</option><option value="1" ${c.afiliado?'selected':''}>Sí (${nf(c.cuotaAf)}%)</option></select></label><label class="f"><span>Años de antigüedad</span><input type="text" inputmode="decimal" id="c_antAnios" data-antanios value="${nf(c.antTotal)%1===0?nf(c.antTotal):''}" placeholder="ej. 10"></label>
        <p class="note" style="grid-column:1/-1;margin:0">Antigüedad: ${nf(c.antTotal)}% (1% por año en la UOM). Si la cargaste desde el recibo, este % sale del recibo.</p>
        <label class="f"><span>Sábado: recargo 100% desde</span><input type="time" data-cfgtxt="sabCorte" value="${c.sabCorte}"></label><span></span>
        <label class="f" style="grid-column:1/-1"><span>Calorías</span><select data-cfgtxt="calModo"><option value="siempre" ${c.calModo==='siempre'?'selected':''}>En todos los turnos</option><option value="orden" ${c.calModo==='orden'?'selected':''}>Solo con orden de trabajo (se cargan por día)</option></select></label>
