@@ -26,11 +26,11 @@ jobs:
           npx @capacitor/assets generate --android --iconBackgroundColor '#2f4b63' --splashBackgroundColor '#2f4b63' || echo sin iconos
           npx cap sync android
           python3 parche-android.py
-          mkdir -p ~/.android && base64 -d firma.txt > ~/.android/debug.keystore
       - name: Compilar
         run: |
           cd android && chmod +x gradlew && ./gradlew assembleDebug --no-daemon
           cp app/build/outputs/apk/debug/app-debug.apk ../rueda-y-quincena.apk
+          keytool -printcert -jarfile ../rueda-y-quincena.apk | grep SHA256
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ultima
