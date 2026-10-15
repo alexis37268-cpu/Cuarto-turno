@@ -23,5 +23,7 @@ public class AlarmaReceiver extends BroadcastReceiver {
         } catch (Exception e) {
             AlarmaService.avisoSimple(c, i.getStringExtra("titulo"), i.getStringExtra("texto"));
         }
+        /* las de los días siguientes siguen en pie: se vuelven a programar por las dudas */
+        try { AlarmaStore.programarTodas(c); } catch (Exception e) { }
     }
 }

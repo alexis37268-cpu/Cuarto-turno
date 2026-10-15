@@ -473,7 +473,7 @@ async function programarAlarmas(){if(!LN)return;
     if(p.display!=='granted'){alEstado='Falta el permiso de notificaciones. Activalo en Ajustes del celu → Apps → Rueda y Quincena.';refrescarEstado();return}
     try{const ex=await LN.checkExactNotificationSetting();alExacta=ex.exact_alarm==='granted'}catch(e){alExacta=null}
     const ahora=Date.now(),lista=[],nat=[];
-    for(const a of alarmasProx(45)){const[h,m]=a.hora.split(':').map(Number);
+    for(const a of alarmasProx(90)){const[h,m]=a.hora.split(':').map(Number);
       const at=new Date(+a.sd.slice(0,4),+a.sd.slice(5,7)-1,+a.sd.slice(8,10),h,m,0);if(at.getTime()<=ahora)continue;
       const base=1e8+(+a.sd.replace(/-/g,'').slice(2))*10; /* id único por día */
       const txt=`Entrás ${a.entra} · turno ${a.turno==='N'?'NOCHE':'DÍA'} · ${fmtDia(a.s)}`;
@@ -485,7 +485,7 @@ async function programarAlarmas(){if(!LN)return;
     if(AL){const r=await AL.programar({alarmas:nat});alExacta=r.exactas;alPantalla=r.pantallaCompleta;alSonido=r.sonido}
     else if(lista.length)await LN.schedule({notifications:lista});
     const prox=lista[0];
-    alEstado=prox?`${lista.length} alarmas programadas. La próxima: ${prox.schedule.at.toLocaleString('es-AR',{weekday:'short',day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})}. Abrí la app al menos una vez por mes para que siga programando.`:'No hay turnos en los próximos 45 días.';
+    alEstado=prox?`${lista.length} alarmas programadas. La próxima: ${prox.schedule.at.toLocaleString('es-AR',{weekday:'short',day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})}. Siguen sonando todos los días de trabajo; abrí la app de vez en cuando para que programe los próximos 3 meses.`:'No hay turnos en los próximos 90 días.';
   }catch(e){alEstado='No se pudieron programar las alarmas: '+(e&&e.message||e)}
   refrescarEstado()}
 function refrescarEstado(){const el=document.getElementById('alEstado');if(el)el.textContent=alEstado;
