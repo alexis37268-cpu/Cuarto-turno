@@ -355,7 +355,8 @@ function vSetup(){
   const NOM={D:'turno día',N:'turno noche',F:'franco'};
   let q='',body='',sig=false;
   if(wz.paso==='nombre'){q='¿Cómo te llamás?';body=`<input id="wzNombre" value="${esc(wz.nombre)}" placeholder="Tu nombre" autocomplete="given-name">`;sig=true}
-  if(wz.paso==='equipo'){q='¿En qué equipo estás?';body=`<div class="opts">${op('contra',false,'Turno')}${op('contra',true,'Contraturno','cubre los descansos del turno')}</div>`}
+  if(wz.paso==='equipo'){q='¿Turno o contraturno?';body=`<div class="opts">${op('contra',false,'Turno','3 trabajo · 2 franco · 2 trabajo · 3 franco')}${op('contra',true,'Contraturno','entra cuando el turno se va de franco')}</div>
+    <p class="note" style="margin:0"><b>Turno:</b> hace la rueda 3-2-2-3, un ciclo de día y el siguiente de noche.<br><b>Contraturno:</b> trabaja los días que el turno descansa y lo cubre.<br>Si no estás seguro, elegí uno: al final te muestro tus próximos 20 días y, si no coinciden, volvés atrás y probás con el otro.</p>`}
   if(wz.paso==='estado'){q='Hoy, ¿qué te toca?';const r=S.cfg.rueda;
     body=`<div class="opts">${r.includes('D')?op('estado','D','Trabajo de día',S.cfg.turnos.D.ini+' a '+S.cfg.turnos.D.fin):''}${r.includes('N')?op('estado','N','Trabajo de noche',S.cfg.turnos.N.ini+' a '+S.cfg.turnos.N.fin):''}${op('estado','F','Estoy de franco')}</div>`}
   if(wz.paso==='bloque'){const ls=largos(secuencia(wz.contra),wz.estado);
