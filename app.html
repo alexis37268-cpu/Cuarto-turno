@@ -444,7 +444,8 @@ function vAlarmas(){
     ${alExacta===false?'<button class="btn pri" data-alexacta>Permitir alarmas a la hora exacta</button>':''}
     ${alPantalla===false?'<button class="btn pri" data-alpantalla>Permitir que la alarma aparezca en pantalla completa</button>':''}
     ${AL?`<button class="btn" data-alsonido>Sonido: ${esc(alSonido||'predeterminado')} · cambiar</button>`:''}
-    <button class="btn" data-alprueba>Probar: sonar en 1 minuto</button>`:''}
+    <button class="btn" data-alprueba>Probar: sonar en 1 minuto</button>
+    ${AL?'<button class="btn" data-alstop style="border-color:var(--bad);color:var(--bad)">Detener alarma que está sonando</button>':''}`:''}
     <div class="list">${filas||'<p class="note">No tenés turnos en los próximos 14 días.</p>'}</div>
     ${LN?'':`<p class="note" style="margin:0">Como página web no puede hacer sonar el celu. Ponelas con estas horas, o instalá la app (APK) y suenan solas.</p>
     <button class="btn" data-copyal>Copiar lista de alarmas</button>`}
@@ -783,6 +784,7 @@ app.addEventListener('click',e=>{
   if(b.dataset.resfer){c.ferQuitados=c.ferQuitados.filter(x=>x!==b.dataset.resfer);save();render();return}
   if(b.hasAttribute('data-addfer')){const d=document.getElementById('nfD').value,n=document.getElementById('nfN').value.trim()||'Feriado';
     if(!d){toast('Elegí la fecha');return} if(!feriado(d))c.feriados.push({d,n});save();render();toast('Feriado agregado');return}
+  if(b.hasAttribute('data-alstop')){try{AL.detener().then(()=>toast('Alarma detenida'))}catch(e){}return}
   if(b.hasAttribute('data-altoggle')){c.alarmasOn=!c.alarmasOn;save();render();toast(c.alarmasOn?'Alarmas activadas':'Alarmas desactivadas');return}
   if(b.hasAttribute('data-alexacta')){try{(AL?AL.pedirExactas():LN.changeExactNotificationSetting()).then(()=>setTimeout(programarAlarmas,1500))}catch(e){}return}
   if(b.hasAttribute('data-alpantalla')){try{AL.pedirPantallaCompleta().then(()=>setTimeout(programarAlarmas,1500))}catch(e){}return}

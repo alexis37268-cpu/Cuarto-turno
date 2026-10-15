@@ -91,6 +91,12 @@ public class AlarmaPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void detener(PluginCall call) {
+        AlarmaService.detenerYa(getContext());
+        call.resolve();
+    }
+
+    @PluginMethod
     public void probar(PluginCall call) {
         int seg = call.getInt("segundos", 60);
         AlarmaStore.programarUna(getContext(), 999999, System.currentTimeMillis() + seg * 1000L,

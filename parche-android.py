@@ -27,6 +27,7 @@ comp = '''
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+        <receiver android:name=".AlarmaCorte" android:exported="false" />
         <service android:name=".AlarmaService" android:exported="false" android:foregroundServiceType="mediaPlayback" />
     </application>'''
 s = s.replace('</application>', comp, 1)

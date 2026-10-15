@@ -93,22 +93,33 @@ public class AlarmaActivity extends Activity {
 
         Button apagar = boton("Apagar", Color.rgb(242, 193, 78), Color.rgb(42, 29, 0));
         apagar.setOnClickListener(v -> {
-            startService(new Intent(this, AlarmaService.class).setAction("APAGAR"));
+            AlarmaService.detenerYa(this);
             finish();
         });
         l.addView(apagar);
 
         Button posponer = boton("Posponer 10 min", Color.rgb(61, 90, 128), Color.WHITE);
         posponer.setOnClickListener(v -> {
-            Intent p = new Intent(this, AlarmaService.class).setAction("POSPONER");
+            Intent p = new Intent(this, AlarmaCorte.class).setAction("POSPONER");
             p.putExtra("titulo", t);
             p.putExtra("texto", x);
-            startService(p);
+            sendBroadcast(p);
             finish();
         });
         l.addView(posponer);
 
         setContentView(l);
+    }
+
+    /** Cualquier tecla de volumen también apaga. */
+    @Override
+    public boolean onKeyDown(int code, android.view.KeyEvent e) {
+        if (code == android.view.KeyEvent.KEYCODE_VOLUME_UP || code == android.view.KeyEvent.KEYCODE_VOLUME_DOWN) {
+            AlarmaService.detenerYa(this);
+            finish();
+            return true;
+        }
+        return super.onKeyDown(code, e);
     }
 
     @Override protected void onDestroy() { super.onDestroy(); }

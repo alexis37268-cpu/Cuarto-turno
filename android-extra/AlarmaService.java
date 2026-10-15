@@ -28,6 +28,23 @@ public class AlarmaService extends Service {
     Vibrator vib;
     PowerManager.WakeLock wl;
     final Handler h = new Handler(Looper.getMainLooper());
+    static AlarmaService actual;
+    static final long MAX_MS = 2 * 60 * 1000L; /* si nadie la apaga, se corta sola a los 2 minutos */
+
+    /** Corta la alarma desde cualquier lado de la app, sin depender de que llegue un Intent. */
+    static void detenerYa(Context c) {
+        AlarmaService s = actual;
+        if (s != null) s.parar();
+        try { c.stopService(new Intent(c, AlarmaService.class)); } catch (Exception e) { }
+        try { c.getSystemService(NotificationManager.class).cancel(77); c.getSystemService(NotificationManager.class).cancel(78); } catch (Exception e) { }
+        AlarmaActivity.cerrar();
+    }
+
+    static PendingIntent piCorte(Context c, String accion, int req, String t, String x) {
+        Intent i = new Intent(c, AlarmaCorte.class).setAction(accion);
+        i.putExtra("titulo", t); i.putExtra("texto", x);
+        return PendingIntent.getBroadcast(c, req, i, FLAGS);
+    }
 
     @Override public IBinder onBind(Intent i) { return null; }
 
@@ -59,6 +76,7 @@ public class AlarmaService extends Service {
 
     @Override
     public int onStartCommand(Intent i, int flags, int startId) {
+        actual = this;
         String act = i != null ? i.getAction() : null;
         if ("APAGAR".equals(act)) { parar(); return START_NOT_STICKY; }
         if ("POSPONER".equals(act)) {
@@ -76,11 +94,8 @@ public class AlarmaService extends Service {
         full.putExtra("texto", x);
         full.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_USER_ACTION);
         PendingIntent pf = PendingIntent.getActivity(this, 1, full, FLAGS);
-        PendingIntent pa = PendingIntent.getService(this, 2, new Intent(this, AlarmaService.class).setAction("APAGAR"), FLAGS);
-        Intent pos = new Intent(this, AlarmaService.class).setAction("POSPONER");
-        pos.putExtra("titulo", t);
-        pos.putExtra("texto", x);
-        PendingIntent pp = PendingIntent.getService(this, 3, pos, FLAGS);
+        PendingIntent pa = piCorte(this, "APAGAR", 2, t, x);
+        PendingIntent pp = piCorte(this, "POSPONER", 3, t, x);
 
         Notification n = new NotificationCompat.Builder(this, CANAL)
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
@@ -88,7 +103,7 @@ public class AlarmaService extends Service {
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .setFullScreenIntent(pf, true).setContentIntent(pf).setOngoing(true)
+                .setFullScreenIntent(pf, true).setContentIntent(pf).setOngoing(true).setDeleteIntent(pa)
                 .addAction(0, "Apagar", pa)
                 .addAction(0, "Posponer 10 min", pp)
                 .build();
@@ -100,7 +115,7 @@ public class AlarmaService extends Service {
         }
         try { startActivity(full); } catch (Exception e) { /* si Android no deja, queda la notificación de pantalla completa */ }
         sonar();
-        h.postDelayed(this::parar, 5 * 60 * 1000L);
+        h.postDelayed(this::parar, MAX_MS);
         return START_NOT_STICKY;
     }
 
@@ -108,7 +123,7 @@ public class AlarmaService extends Service {
         try {
             PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
             wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "ruedayquincena:alarma");
-            wl.acquire(6 * 60 * 1000L);
+            wl.acquire(MAX_MS + 30000L);
         } catch (Exception e) { /* nada */ }
         AudioAttributes aa = new AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_ALARM)
@@ -122,6 +137,7 @@ public class AlarmaService extends Service {
                 mp.setAudioAttributes(aa);
                 mp.setDataSource(this, u);
                 mp.setLooping(true);
+                mp.setOnErrorListener((m, w, e) -> { parar(); return true; });
                 mp.prepare();
                 mp.start();
                 break;
@@ -147,11 +163,13 @@ public class AlarmaService extends Service {
     }
 
     void parar() {
+        if (actual == this) actual = null;
         liberar();
         AlarmaActivity.cerrar();
         try { stopForeground(true); } catch (Exception e) { }
         stopSelf();
     }
 
-    @Override public void onDestroy() { liberar(); super.onDestroy(); }
+    @Override public void onDestroy() { if (actual == this) actual = null; liberar(); super.onDestroy(); }
+    @Override public void onTaskRemoved(Intent i) { parar(); super.onTaskRemoved(i); }
 }
