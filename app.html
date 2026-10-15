@@ -333,7 +333,8 @@ function infoBloque(seq,k){const L=seq.length,v=seq[k];let a=0,b=0;
   return{len:a+b+1,quedan:b+1,vuelve}}
 function largos(seq,est){const s=new Set();seq.forEach((v,k)=>{if(v===est)s.add(infoBloque(seq,k).len)});return[...s].sort((x,y)=>y-x)}
 let wz=null;
-function wzNuevo(){wz={paso:'nombre',nombre:S.cfg.nombre||'',contra:null,estado:null,bloque:null,quedan:null,vuelve:null,anios:null,rec:null,calModo:null,comida:null}}
+function wzNuevo(){S.cfg.rueda=DEF.rueda.slice(); /* el paso a paso siempre arranca con la rueda de la planta (3-2-2-3) */
+  wz={paso:'nombre',nombre:S.cfg.nombre||'',contra:null,estado:null,bloque:null,quedan:null,vuelve:null,anios:null,rec:null,calModo:null,comida:null}}
 function wzPasos(){
   const seq=wz.contra==null?null:secuencia(wz.contra);
   const p=['nombre','equipo','estado'];
