@@ -129,7 +129,7 @@ const FERIADOS_2026=[
 const CERRADOS=['2026-01-01','2026-09-07','2026-12-25','2027-01-01'];
 const DEF={
  nombre:'',
- rueda:'DDDFFDDFFFNNNFFNNFFF'.split(''),
+ rueda:'DDDFFDDFFFNNNFFNNFFF'.split(''), ruedaContra:'FFFNNFFDDDFFFDDFFNNN'.split(''),
  ancla:'2026-10-01', contra:false,
  turnos:{D:{ini:'06:00',fin:'18:00',noct:0,nt:0},N:{ini:'18:00',fin:'06:00',noct:0,nt:0}},
  horasTurno:12, base:8593.52, aumento:0,
@@ -153,6 +153,7 @@ function migrar(){const c=S.cfg;
   if(SAVED.base!=null&&nf(SAVED.aumento)){c.base=Math.round(nf(SAVED.base)*(1+nf(SAVED.aumento)/100)*100)/100;c.aumento=0}
   if(SAVED.antAnios!=null&&SAVED.antTotal==null)c.antTotal=nf(SAVED.antAnios)*nf(SAVED.antPct??1);
   if((SAVED.rueda||[]).join('')==='DDDFFFDDFFNNNFFFNNFF'){c.rueda=DEF.rueda.slice();c.listo=false} /* la rueda real es 3-2-2-3: hay que volver a ubicarse */
+  if(SAVED.contra&&!SAVED.ruedaContra){c.ruedaContra=DEF.ruedaContra.slice();c.listo=false} /* contraturno corregido a 3-3-2-2 */
   if(SAVED.desc==null||SAVED.desc===20)c.desc=17; /* antes era un 20% fijo; ahora ley 17% + gremio */
   save()}
 if(S.cfg.ferNoTrabHoras===8)S.cfg.ferNoTrabHoras=12; /* el feriado no trabajado se paga el turno de 12 h */
@@ -213,10 +214,9 @@ function feriado(s){if((S.cfg.ferQuitados||[]).includes(s))return null;
 function rueda(s,contra){const c=S.cfg,L=c.rueda.length;if(!L)return 'F';if(contra==null)contra=c.contra;
   const i=Math.round((toT(s)-toT(c.ancla))/DAY),k=((i%L)+L)%L,r=c.rueda[k];
   if(!contra)return r;
-  if(r!=='F')return 'F';
-  /* contraturno: trabaja cuando el turno descansa, en el mismo horario del ciclo (día o noche) */
-  for(let j=1;j<=L;j++){const p=c.rueda[((k-j)%L+L)%L];if(p!=='F')return p}
-  return 'D'}
+  /* contraturno: rueda propia 3-3-2-2 (mismo horario todo el bloque; cambia de noche a mañana después de los 2 francos) */
+  const C=c.ruedaContra&&c.ruedaContra.length?c.ruedaContra:DEF.ruedaContra,LC=C.length,kc=((i%LC)+LC)%LC;
+  return C[kc]}
 /* día resuelto: qué pasa ese día */
 function dia(s){
   const o=S.days[s]||{}, r=rueda(s);
@@ -333,7 +333,7 @@ function infoBloque(seq,k){const L=seq.length,v=seq[k];let a=0,b=0;
   return{len:a+b+1,quedan:b+1,vuelve}}
 function largos(seq,est){const s=new Set();seq.forEach((v,k)=>{if(v===est)s.add(infoBloque(seq,k).len)});return[...s].sort((x,y)=>y-x)}
 let wz=null;
-function wzNuevo(){S.cfg.rueda=DEF.rueda.slice(); /* el paso a paso siempre arranca con la rueda de la planta (3-2-2-3) */
+function wzNuevo(){S.cfg.rueda=DEF.rueda.slice();S.cfg.ruedaContra=DEF.ruedaContra.slice(); /* el paso a paso siempre arranca con la rueda de la planta (3-2-2-3) */
   wz={paso:'nombre',nombre:S.cfg.nombre||'',contra:null,estado:null,bloque:null,quedan:null,vuelve:null,anios:null,rec:null,calModo:null,comida:null}}
 function wzPasos(){
   const seq=wz.contra==null?null:secuencia(wz.contra);
@@ -355,8 +355,8 @@ function vSetup(){
   const NOM={D:'turno día',N:'turno noche',F:'franco'};
   let q='',body='',sig=false;
   if(wz.paso==='nombre'){q='¿Cómo te llamás?';body=`<input id="wzNombre" value="${esc(wz.nombre)}" placeholder="Tu nombre" autocomplete="given-name">`;sig=true}
-  if(wz.paso==='equipo'){q='¿Turno o contraturno?';body=`<div class="opts">${op('contra',false,'Turno','3 trabajo · 2 franco · 2 trabajo · 3 franco')}${op('contra',true,'Contraturno','entra cuando el turno se va de franco')}</div>
-    <p class="note" style="margin:0"><b>Turno:</b> hace la rueda 3-2-2-3, un ciclo de día y el siguiente de noche.<br><b>Contraturno:</b> trabaja los días que el turno descansa y lo cubre.<br>Si no estás seguro, elegí uno: al final te muestro tus próximos 20 días y, si no coinciden, volvés atrás y probás con el otro.</p>`}
+  if(wz.paso==='equipo'){q='¿Turno o contraturno?';body=`<div class="opts">${op('contra',false,'Turno','3-2-2-3: trabajo 3 · franco 2 · trabajo 2 · franco 3')}${op('contra',true,'Contraturno','3-3-2-2: trabajo 3 · franco 3 · trabajo 2 · franco 2')}</div>
+    <p class="note" style="margin:0"><b>Turno:</b> 3 trabajo, 2 franco, 2 trabajo, 3 franco. Un ciclo de mañana y el siguiente de noche.<br><b>Contraturno:</b> 3 trabajo, 3 franco, 2 trabajo, 2 franco. Cambia de noche a mañana después de los 2 francos.<br>Si no estás seguro, elegí uno: al final te muestro tus próximos 20 días y, si no coinciden, volvés atrás y probás con el otro.</p>`}
   if(wz.paso==='estado'){q='Hoy, ¿qué te toca?';const r=S.cfg.rueda;
     body=`<div class="opts">${r.includes('D')?op('estado','D','Trabajo de día',S.cfg.turnos.D.ini+' a '+S.cfg.turnos.D.fin):''}${r.includes('N')?op('estado','N','Trabajo de noche',S.cfg.turnos.N.ini+' a '+S.cfg.turnos.N.fin):''}${op('estado','F','Estoy de franco')}</div>`}
   if(wz.paso==='bloque'){const ls=largos(secuencia(wz.contra),wz.estado);
